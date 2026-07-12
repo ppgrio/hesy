@@ -1,11 +1,17 @@
-import { useState } from 'react'
+import { useState, useEffect, use } from 'react'
 import reactLogo from './assets/react.svg'
 import viteLogo from './assets/vite.svg'
 import heroImg from './assets/hero.png'
 import './App.css'
 
 function App() {
-  const [count, setCount] = useState(0)
+  const [users, setUsers] = useState([]);
+
+  useEffect(() => {
+      fetch('http://localhost:5000/api/users')
+      .then(res => res.json())
+      .then(data => setUsers(data.users))
+  },[])
 
   return (
     <>
@@ -21,13 +27,14 @@ function App() {
             Edit <code>src/App.jsx</code> and save to test <code>HMR</code>
           </p>
         </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
+        <h2>Users</h2>
+        <ul>
+          {users.map((user) => (
+            <p key={user.id}>
+              {user.name}
+            </p>
+          ))}
+        </ul>
       </section>
 
       <div className="ticks"></div>
