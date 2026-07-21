@@ -1,4 +1,4 @@
-import { useState, useEffect, use } from 'react'
+import { useState, useEffect } from 'react'
 import reactLogo from './assets/react.svg'
 import viteLogo from './assets/vite.svg'
 import heroImg from './assets/hero.png'
@@ -7,10 +7,30 @@ import './App.css'
 function App() {
   const [users, setUsers] = useState([]);
 
+  const crearPaciente = () => {
+      fetch('http://172.20.10.14:5000/api/patient', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({name:'Juan', email: 'juan@gmail.com', password: '1234'})
+      })
+      .then(() => {
+        fetch('http://172.20.10.14:5000/api/patient',{
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({name:'Jose', email: 'jose@gmail.com', password: '1234'})
+        })
+      })
+      .then(() => {
+        fetch('http://172.20.10.14:5000/api/patient')
+        .then(res => res.json())
+        .then(data => setUsers(data))
+      })
+  }
+
   useEffect(() => {
-      fetch('http://192.168.0.158:5000/api/users')
+      fetch('http://172.20.10.14:5000/api/patient')
       .then(res => res.json())
-      .then(data => setUsers(data.users))
+      .then(data => setUsers(data))
   },[])
 
   return (
@@ -28,6 +48,7 @@ function App() {
           </p>
         </div>
         <h2>Users</h2>
+        <button onClick={crearPaciente}>Crear paciente</button>
         <ul>
           {users.map((user) => (
             <p key={user.id}>
