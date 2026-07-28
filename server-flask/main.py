@@ -1,7 +1,12 @@
 from flask import Flask
 from flask_cors import CORS
-from models.paciente import db, Paciente
 from routes.paciente import paciente_bp
+from models.init import db
+from models.pacientes import Pacientes
+from models.doctores import Doctores
+from models.accesos import Accesos
+from models.filtros import Filtros
+from models.sesiones import Sesiones
 
 app = Flask(__name__)
 CORS(app)

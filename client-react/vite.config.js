@@ -5,8 +5,11 @@ import react from '@vitejs/plugin-react'
 export default defineConfig({
   plugins: [react()],
   server : {
+    proxy: {
+      '/api': 'http://127.0.0.1:5000'
+    },
     cors : {
-      origin: 'http://192.168.0.158:5000' //aqui va la ip de el servidor
+      origin: 'http://127.0.0.1:5000' //aqui va la ip de el servidor
     }
   }
 })

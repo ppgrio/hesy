@@ -1,7 +1,8 @@
 from flask import Blueprint 
 from flask import request 
 from flask import jsonify
-from models.paciente import db, Paciente
+from models.init import db
+from models.pacientes import Pacientes
 
 paciente_bp = Blueprint('paciente', __name__)
 
@@ -13,7 +14,7 @@ def hello_world():
 def create_patient():
     data = request.get_json()
     try:
-        paciente = Paciente(name=data['name'], email=data['email'], password=data['password'])
+        paciente = Pacientes(name=data['name'], email=data['email'], password=data['password'])
         db.session.add(paciente)
         db.session.commit()
         return {'message' : 'Paciente creado'},201
@@ -23,10 +24,5 @@ def create_patient():
 
 @paciente_bp.route('/api/patient')
 def get_patients():
-    pacientes = Paciente.query.all()
-    return jsonify([{'id': p.id, 'name': p.name} for p in pacientes])
-
-
-@paciente_bp.route('/api/fruits')
-def get_fruits():
-    return ['Apple', 'Banana', 'Cherry']
+    pacientes = Pacientes.query.all()
+    return jsonify([{'id': p.id, 'name': p.nombre} for p in pacientes])

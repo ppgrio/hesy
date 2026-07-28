@@ -5,31 +5,31 @@ import heroImg from './assets/hero.png'
 import './App.css'
 
 function App() {
-  const ip = "10.11.161.150";
+  const ip = "192.168.1.92";
   const [users, setUsers] = useState([]);
 
   const crearPaciente = () => {
-      fetch(`http://${ip}:5000/api/patient`, {
+      fetch('/api/patient', {
           method: 'POST',
           headers: {'Content-Type': 'application/json'},
           body: JSON.stringify({name:'Juan', email: 'juan@gmail.com', password: '1234'})
       })
       .then(() => {
-        fetch(`http://${ip}:5000/api/patient`,{
+        fetch('/api/patient',{
           method: 'POST',
           headers: {'Content-Type': 'application/json'},
           body: JSON.stringify({name:'Jose', email: 'jose@gmail.com', password: '1234'})
         })
       })
       .then(() => {
-        fetch(`http://${ip}:5000/api/patient`)
+        fetch('/api/patient')
         .then(res => res.json())
         .then(data => setUsers(data))
       })
   }
 
   useEffect(() => {
-      fetch(`http://${ip}:5000/api/patient`)
+      fetch('/api/patient')
       .then(res => res.json())
       .then(data => setUsers(data))
   },[])
