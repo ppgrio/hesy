@@ -25,4 +25,4 @@ def create_patient():
 @paciente_bp.route('/api/patient')
 def get_patients():
     pacientes = Pacientes.query.all()
-    return jsonify([{'id': p.id, 'name': p.nombre} for p in pacientes])
+    return jsonify([{'id': p.no_expediente, 'name': p.nombre} for p in pacientes])
