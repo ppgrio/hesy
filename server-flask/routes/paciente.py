@@ -1,28 +1,28 @@
-from flask import Blueprint 
-from flask import request 
-from flask import jsonify
+from flask import Blueprint, request, jsonify
 from models.init import db
 from models.pacientes import Pacientes
+from models.doctores import Doctores
+from models.accesos import Accesos
+from models.filtros import Filtros
 
 paciente_bp = Blueprint('paciente', __name__)
 
-@paciente_bp.route('/')
-def hello_world():
-    return 'Hello world'
-
-@paciente_bp.route('/api/patient', methods=['POST'])
-def create_patient():
-    data = request.get_json()
-    try:
-        paciente = Pacientes(name=data['name'], email=data['email'], password=data['password'])
-        db.session.add(paciente)
-        db.session.commit()
-        return {'message' : 'Paciente creado'},201
-    except Exception as e:
-        db.session.rollback()
-        return{'error': str(e)}, 400
-
-@paciente_bp.route('/api/patient')
+@paciente_bp.route('/api/patient', methods=['GET'])
 def get_patients():
     pacientes = Pacientes.query.all()
-    return jsonify([{'id': p.no_expediente, 'name': p.nombre} for p in pacientes])
+    result = []
+    for p in pacientes:
+        result.append({
+            'no_expediente': p.no_expediente,
+            'nombre': p.nombre,
+            'fecha_nacimiento': p.fecha_nacimiento.isoformat() if p.fecha_nacimiento else None,
+            'hierros': p.hierros,
+            'eritropoyetina': p.eritropoyetina,
+            'observaciones': p.observaciones,
+            'fecha_inicio_filtro': p.fecha_inicio_filtro.isoformat() if p.fecha_inicio_filtro else None,
+            'fecha_fin_filtro': p.fecha_fin_filtro.isoformat() if p.fecha_fin_filtro else None,
+            'doctor': p.doctor.nombre if p.doctor else None,
+            'acceso': p.acceso.tipo if p.acceso else None,
+            'filtro': p.filtro.estado if p.filtro else None,
+        })
+    return jsonify(result)

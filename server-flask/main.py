@@ -1,6 +1,7 @@
 from flask import Flask
 from flask_cors import CORS
 from routes.paciente import paciente_bp
+from routes.sesion import sesion_bp
 from models.init import db
 from models.pacientes import Pacientes
 from models.doctores import Doctores
@@ -14,6 +15,7 @@ app.config.from_object('config')
 db.init_app(app)
 
 app.register_blueprint(paciente_bp)
+app.register_blueprint(sesion_bp)
 
 with app.app_context():
     db.create_all()
