@@ -1,0 +1,249 @@
+.cal-nav {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+
+  button {
+    padding: 6px 14px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--bg);
+    color: var(--text);
+    font: 14px var(--sans);
+    cursor: pointer;
+    transition: background 0.2s, color 0.2s;
+
+    &:hover {
+      background: var(--accent-bg);
+      color: var(--text-h);
+    }
+  }
+}
+
+.cal-rango {
+  font-size: 15px;
+  color: var(--text-h);
+  font-weight: 500;
+}
+
+.cal-wrapper {
+  flex: 1;
+  overflow: auto;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+
+.cal-tabla {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  table-layout: fixed;
+  min-width: 700px;
+
+  th, td {
+    border: 1px solid var(--border);
+    text-align: center;
+    vertical-align: top;
+  }
+
+  thead {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+  }
+
+  .cal-hora-header {
+    width: 60px;
+    min-width: 60px;
+    background: var(--code-bg);
+    color: var(--text-h);
+    font-weight: 500;
+    font-family: var(--heading);
+    position: sticky;
+    left: 0;
+    z-index: 3;
+    padding: 8px 4px;
+  }
+
+  .cal-dia-header {
+    background: var(--code-bg);
+    color: var(--text-h);
+    font-weight: 500;
+    font-family: var(--heading);
+    padding: 8px 4px;
+  }
+
+  .cal-dia-nombre {
+    display: block;
+    font-size: 13px;
+  }
+
+  .cal-dia-fecha {
+    display: block;
+    font-size: 11px;
+    color: var(--text);
+    margin-top: 2px;
+  }
+
+  .cal-hora {
+    font-size: 12px;
+    color: var(--text);
+    background: var(--code-bg);
+    padding: 2px 6px;
+    width: 60px;
+    min-width: 60px;
+    vertical-align: middle;
+    position: sticky;
+    left: 0;
+    z-index: 1;
+  }
+
+  .cal-celda {
+    padding: 0;
+    min-width: 90px;
+    min-height: 32px;
+    cursor: pointer;
+    position: relative;
+
+    &.cal-buscando {
+      padding: 0;
+      vertical-align: top;
+      cursor: default;
+    }
+
+    &:hover .cal-mas {
+      opacity: 1;
+    }
+  }
+
+  .cal-vacio {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    min-height: 32px;
+  }
+
+  .cal-mas {
+    opacity: 0;
+    font-size: 20px;
+    color: var(--accent);
+    font-weight: 600;
+    transition: opacity 0.15s;
+  }
+
+  .cal-pacientes-lista {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    padding: 2px;
+  }
+
+  .cal-paciente-item {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    background: var(--accent-bg);
+    border-radius: 3px;
+    padding: 2px 4px;
+    font-size: 11px;
+    line-height: 1.3;
+  }
+
+  .cal-paciente-filtro,
+  .cal-paciente-acceso {
+    font-size: 10px;
+    padding: 0 4px;
+    border-radius: 2px;
+    flex-shrink: 0;
+  }
+
+  .cal-paciente-filtro {
+    background: #e3f2fd;
+    color: #1565c0;
+  }
+
+  .cal-paciente-acceso {
+    background: #e8f5e9;
+    color: #2e7d32;
+  }
+
+  .cal-paciente-nombre {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--text-h);
+    flex: 1;
+  }
+
+  .cal-quitar {
+    background: none;
+    border: none;
+    color: #e74c3c;
+    font-size: 14px;
+    line-height: 1;
+    cursor: pointer;
+    padding: 0 2px;
+    flex-shrink: 0;
+
+    &:hover {
+      color: #c0392b;
+    }
+  }
+
+  .cal-busqueda {
+    padding: 4px;
+
+    input {
+      width: 100%;
+      padding: 4px 6px;
+      border: 1px solid var(--accent);
+      border-radius: 4px;
+      font: 12px var(--sans);
+      color: var(--text-h);
+      background: var(--bg);
+      outline: none;
+      box-sizing: border-box;
+    }
+  }
+
+  .cal-resultados {
+    margin-top: 4px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    max-height: 160px;
+    overflow-y: auto;
+    position: absolute;
+    left: 4px;
+    right: 4px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    z-index: 10;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+
+    button {
+      background: none;
+      border: none;
+      padding: 4px 8px;
+      text-align: left;
+      font: 12px var(--sans);
+      color: var(--text-h);
+      cursor: pointer;
+
+      &:hover {
+        background: var(--accent-bg);
+      }
+    }
+
+    &.vacio {
+      padding: 8px;
+      font-size: 12px;
+      color: var(--text);
+      text-align: center;
+    }
+  }
+}

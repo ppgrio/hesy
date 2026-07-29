@@ -3,6 +3,7 @@ import Navbar from './components/Navbar'
 import Pacientes from './components/Pacientes'
 import Sesiones from './components/Sesiones'
 import Doctores from './components/Doctores'
+import Calendario from './components/Calendario'
 import './App.css'
 
 function App() {
@@ -13,6 +14,7 @@ function App() {
         <Route path="/pacientes" element={<Pacientes />} />
         <Route path="/sesiones" element={<Sesiones />} />
         <Route path="/doctores" element={<Doctores />} />
+        <Route path="/calendario" element={<Calendario />} />
         <Route path="*" element={<Navigate to="/pacientes" replace />} />
       </Routes>
     </>
