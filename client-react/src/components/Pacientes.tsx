@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react'
+import './Pacientes.css'
 
 interface Patient {
   no_expediente: number
@@ -98,7 +99,7 @@ function Pacientes() {
                   >
                     {col.label}
                     {sortKey === col.key && (
-                      <span className="sort-arrow">{sortDir === 'desc' ? ' ↓' : ' ↑'}</span>
+                      <span className="sort-arrow">{sortDir === 'desc' ? ' ▼' : ' ▲'}</span>
                     )}
                   </th>
                 ))}

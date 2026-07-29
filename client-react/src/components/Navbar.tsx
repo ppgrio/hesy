@@ -1,4 +1,5 @@
 import { NavLink } from 'react-router-dom'
+import './Navbar.css'
 
 function Navbar() {
   return (
@@ -10,6 +11,9 @@ function Navbar() {
         </NavLink>
         <NavLink to="/sesiones" className={({ isActive }) => isActive ? 'active' : ''}>
           Sesiones
+        </NavLink>
+        <NavLink to="/doctores" className={({ isActive }) => isActive ? 'active' : ''}>
+          Doctores
         </NavLink>
       </div>
     </nav>

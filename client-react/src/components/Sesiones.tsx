@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react'
+import './Sesiones.css'
 
 interface Session {
   id: number
@@ -7,12 +8,30 @@ interface Session {
   fecha_hora: string | null
 }
 
+type ColumnKey = 'id' | 'paciente_nombre' | 'fecha' | 'hora'
+
+const columnSortKey: Record<ColumnKey, keyof Session> = {
+  id: 'id',
+  paciente_nombre: 'paciente_nombre',
+  fecha: 'fecha_hora',
+  hora: 'fecha_hora',
+}
+
+const columns: { key: ColumnKey; label: string }[] = [
+  { key: 'id', label: 'ID Sesión' },
+  { key: 'paciente_nombre', label: 'Nombre Paciente' },
+  { key: 'fecha', label: 'Fecha' },
+  { key: 'hora', label: 'Hora' },
+]
+
 function Sesiones() {
   const [sessions, setSessions] = useState<Session[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [fechaDesde, setFechaDesde] = useState('')
   const [fechaHasta, setFechaHasta] = useState('')
+  const [sortKey, setSortKey] = useState<ColumnKey>('fecha')
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc')
 
   useEffect(() => {
     fetch('/api/session')
@@ -30,15 +49,38 @@ function Sesiones() {
       })
   }, [])
 
+  const sorted = useMemo(() => {
+    const sk = columnSortKey[sortKey]
+    return [...sessions].sort((a, b) => {
+      const va = a[sk]
+      const vb = b[sk]
+      if (va == null && vb == null) return 0
+      if (va == null) return 1
+      if (vb == null) return -1
+      if (va < vb) return sortDir === 'asc' ? -1 : 1
+      if (va > vb) return sortDir === 'asc' ? 1 : -1
+      return 0
+    })
+  }, [sessions, sortKey, sortDir])
+
   const filteredSessions = useMemo(() => {
-    return sessions.filter(s => {
+    return sorted.filter(s => {
       if (!s.fecha_hora) return false
       const fecha = s.fecha_hora.split('T')[0]
       if (fechaDesde && fecha < fechaDesde) return false
       if (fechaHasta && fecha > fechaHasta) return false
       return true
     })
-  }, [sessions, fechaDesde, fechaHasta])
+  }, [sorted, fechaDesde, fechaHasta])
+
+  function handleSort(key: ColumnKey) {
+    if (key === sortKey) {
+      setSortDir(d => (d === 'asc' ? 'desc' : 'asc'))
+    } else {
+      setSortKey(key)
+      setSortDir('desc')
+    }
+  }
 
   return (
     <section id="patients-page">
@@ -79,10 +121,18 @@ function Sesiones() {
               <table>
                 <thead>
                   <tr>
-                    <th>ID Sesión</th>
-                    <th>Nombre Paciente</th>
-                    <th>Fecha</th>
-                    <th>Hora</th>
+                    {columns.map(col => (
+                      <th
+                        key={col.key}
+                        className="sortable"
+                        onClick={() => handleSort(col.key)}
+                      >
+                        {col.label}
+                        {sortKey === col.key && (
+                          <span className="sort-arrow">{sortDir === 'desc' ? ' ▼' : ' ▲'}</span>
+                        )}
+                      </th>
+                    ))}
                   </tr>
                 </thead>
                 <tbody>

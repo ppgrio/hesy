@@ -1,44 +1,3 @@
-.navbar {
-  display: flex;
-  align-items: center;
-  gap: 32px;
-  padding: 16px 32px;
-  border-bottom: 1px solid var(--border);
-  background: var(--bg);
-}
-
-.navbar-brand {
-  font-family: var(--heading);
-  font-size: 20px;
-  font-weight: 600;
-  color: var(--text-h);
-}
-
-.navbar-links {
-  display: flex;
-  gap: 16px;
-}
-
-.navbar-links a {
-  text-decoration: none;
-  color: var(--text);
-  font-size: 16px;
-  padding: 6px 12px;
-  border-radius: 6px;
-  transition: background 0.2s, color 0.2s;
-
-  &:hover {
-    background: var(--accent-bg);
-    color: var(--text-h);
-  }
-
-  &.active {
-    background: var(--accent-bg);
-    color: var(--accent);
-    font-weight: 500;
-  }
-}
-
 #patients-page {
   padding: 32px;
   text-align: left;
@@ -61,6 +20,72 @@
 
 .table-wrapper {
   overflow-x: auto;
+}
+
+.filtro-fechas {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+
+  label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 14px;
+    color: var(--text);
+  }
+
+  input[type="text"] {
+    padding: 6px 10px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font: 14px var(--sans);
+    color: var(--text-h);
+    background: var(--bg);
+    outline: none;
+    flex: 1;
+    min-width: 200px;
+    transition: border-color 0.2s;
+
+    &:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 2px var(--accent-bg);
+    }
+  }
+
+  input[type="date"] {
+    padding: 6px 10px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font: 14px var(--sans);
+    color: var(--text-h);
+    background: var(--bg);
+    outline: none;
+    transition: border-color 0.2s;
+
+    &:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 2px var(--accent-bg);
+    }
+  }
+
+  button {
+    padding: 6px 14px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--bg);
+    color: var(--text);
+    font: 14px var(--sans);
+    cursor: pointer;
+    transition: background 0.2s, color 0.2s;
+
+    &:hover {
+      background: var(--accent-bg);
+      color: var(--text-h);
+    }
+  }
 }
 
 table {
@@ -100,3 +125,5 @@ table {
     background: var(--accent-bg);
   }
 }
+
+
