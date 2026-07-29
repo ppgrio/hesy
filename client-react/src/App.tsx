@@ -4,9 +4,14 @@ import viteLogo from './assets/vite.svg'
 import heroImg from './assets/hero.png'
 import './App.css'
 
+interface User {
+  id: number
+  name: string
+  email: string
+}
+
 function App() {
-  const ip = "192.168.1.92";
-  const [users, setUsers] = useState([]);
+  const [users, setUsers] = useState<User[]>([])
 
   const crearPaciente = () => {
       fetch('/api/patient', {
@@ -45,7 +50,7 @@ function App() {
         <div>
           <h1>Get started</h1>
           <p>
-            Edit <code>src/App.jsx</code> and save to test <code>HMR</code>
+            Edit <code>src/App.tsx</code> and save to test <code>HMR</code>
           </p>
         </div>
         <h2>Users</h2>
