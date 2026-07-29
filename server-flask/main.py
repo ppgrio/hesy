@@ -9,6 +9,8 @@ from models.doctores import Doctores
 from models.accesos import Accesos
 from models.filtros import Filtros
 from models.sesiones import Sesiones
+from models.areas import Areas
+from models.inventario import Inventario
 
 app = Flask(__name__)
 CORS(app)
