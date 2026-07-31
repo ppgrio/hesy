@@ -2,6 +2,9 @@ from flask import Blueprint, jsonify, request
 from models.init import db
 from models.sesiones import Sesiones
 from models.pacientes import Pacientes
+from models.medicamentos_sesion import MedicamentosSesion
+from models.inventario import Inventario
+from sqlalchemy.exc import IntegrityError
 
 sesion_bp = Blueprint('sesion', __name__)
 
@@ -53,5 +56,63 @@ def create_session():
 def delete_session(id):
     sesion = Sesiones.query.get_or_404(id)
     db.session.delete(sesion)
+    db.session.commit()
+    return jsonify({'success': True})
+
+@sesion_bp.route('/api/session/<int:sesion_id>/medicamentos')
+def get_medicamentos_sesion(sesion_id):
+    Sesiones.query.get_or_404(sesion_id)
+    usos = MedicamentosSesion.query.filter_by(sesion_id=sesion_id).all()
+    return jsonify([{
+        'id': u.id,
+        'inventario_id': u.inventario_id,
+        'nombre': u.inventario_item.nombre if u.inventario_item else None,
+        'cantidad_usada': u.cantidad_usada,
+        'stock_disponible': u.inventario_item.cantidad if u.inventario_item else 0,
+    } for u in usos])
+
+@sesion_bp.route('/api/session/<int:sesion_id>/medicamentos', methods=['POST'])
+def add_medicamento_sesion(sesion_id):
+    Sesiones.query.get_or_404(sesion_id)
+    data = request.get_json()
+    inventario_id = data.get('inventario_id')
+    cantidad = data.get('cantidad_usada')
+
+    if not inventario_id or not cantidad or cantidad < 1:
+        return jsonify({'error': 'inventario_id y cantidad_usada (>= 1) son obligatorios'}), 400
+
+    inventario = Inventario.query.get(inventario_id)
+    if not inventario:
+        return jsonify({'error': 'Medicamento no encontrado en inventario'}), 404
+
+    if inventario.cantidad < cantidad:
+        return jsonify({
+            'error': f'Stock insuficiente de {inventario.nombre}. Disponible: {inventario.cantidad}'
+        }), 400
+
+    uso = MedicamentosSesion(sesion_id=sesion_id, inventario_id=inventario_id, cantidad_usada=cantidad)
+    inventario.cantidad -= cantidad
+    db.session.add(uso)
+
+    try:
+        db.session.commit()
+        return jsonify({
+            'id': uso.id,
+            'inventario_id': uso.inventario_id,
+            'nombre': uso.inventario_item.nombre if uso.inventario_item else None,
+            'cantidad_usada': uso.cantidad_usada,
+            'stock_disponible': uso.inventario_item.cantidad if uso.inventario_item else 0,
+        }), 201
+    except IntegrityError:
+        db.session.rollback()
+        return jsonify({'error': 'Error al descontar stock. Intente de nuevo.'}), 409
+
+@sesion_bp.route('/api/medicamento-sesion/<int:id>', methods=['DELETE'])
+def delete_medicamento_sesion(id):
+    uso = MedicamentosSesion.query.get_or_404(id)
+    inventario = uso.inventario_item
+    if inventario:
+        inventario.cantidad += uso.cantidad_usada
+    db.session.delete(uso)
     db.session.commit()
     return jsonify({'success': True})

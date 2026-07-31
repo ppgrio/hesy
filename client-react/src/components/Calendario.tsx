@@ -15,6 +15,20 @@ interface Patient {
   nombre: string
 }
 
+interface InventarioItem {
+  id: number
+  nombre: string
+  cantidad: number
+}
+
+interface MedicamentoUso {
+  id: number
+  inventario_id: number
+  nombre: string | null
+  cantidad_usada: number
+  stock_disponible: number
+}
+
 const DAYS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom']
 
 const HORAS: string[] = []
@@ -74,6 +88,12 @@ function Calendario() {
   const [slotBuscando, setSlotBuscando] = useState<SlotBusqueda | null>(null)
   const [textoBusqueda, setTextoBusqueda] = useState('')
   const [mensaje, setMensaje] = useState<{ tipo: 'error' | 'exito'; texto: string } | null>(null)
+  const [modalSession, setModalSession] = useState<Session | null>(null)
+  const [modalMedicamentos, setModalMedicamentos] = useState<MedicamentoUso[]>([])
+  const [inventarioItems, setInventarioItems] = useState<InventarioItem[]>([])
+  const [modalBusqueda, setModalBusqueda] = useState('')
+  const [modalCantidad, setModalCantidad] = useState(1)
+  const [modalCargando, setModalCargando] = useState(false)
 
   function mostrarMensaje(tipo: 'error' | 'exito', texto: string) {
     setMensaje({ tipo, texto })
@@ -183,6 +203,87 @@ function Calendario() {
       .catch(err => mostrarMensaje('error', err.message))
   }
 
+  function abrirModalMedicamentos(s: Session) {
+    setModalSession(s)
+    setModalMedicamentos([])
+    setModalBusqueda('')
+    setModalCantidad(1)
+    setModalCargando(true)
+    Promise.all([
+      fetch(`/api/session/${s.id}/medicamentos`).then(r => r.json()),
+      fetch('/api/inventario').then(r => r.json()),
+    ])
+      .then(([medicamentos, inventario]) => {
+        setModalMedicamentos(medicamentos)
+        setInventarioItems(inventario)
+        setModalCargando(false)
+      })
+      .catch(() => {
+        mostrarMensaje('error', 'Error al cargar medicamentos')
+        setModalCargando(false)
+      })
+  }
+
+  function cerrarModalMedicamentos() {
+    setModalSession(null)
+    setModalMedicamentos([])
+    setInventarioItems([])
+    setModalBusqueda('')
+    setModalCantidad(1)
+  }
+
+  const modalResultadosBusqueda = useMemo(() => {
+    if (!modalBusqueda.trim()) return []
+    const q = modalBusqueda.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    return inventarioItems.filter(i =>
+      i.cantidad > 0 && i.nombre.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').includes(q)
+    )
+  }, [modalBusqueda, inventarioItems])
+
+  function agregarMedicamento(item: InventarioItem) {
+    if (!modalSession || modalCantidad < 1) return
+    if (modalCantidad > item.cantidad) {
+      mostrarMensaje('error', `Stock insuficiente de ${item.nombre}. Disponible: ${item.cantidad}`)
+      return
+    }
+    fetch(`/api/session/${modalSession.id}/medicamentos`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ inventario_id: item.id, cantidad_usada: modalCantidad }),
+    })
+      .then(async res => {
+        if (!res.ok) {
+          const err = await res.json()
+          throw new Error(err.error || 'Error al agregar medicamento')
+        }
+        return res.json()
+      })
+      .then(nuevoUso => {
+        setModalMedicamentos(prev => [...prev, nuevoUso])
+        setInventarioItems(prev => prev.map(i =>
+          i.id === item.id ? { ...i, cantidad: i.cantidad - modalCantidad } : i
+        ))
+        setModalBusqueda('')
+        setModalCantidad(1)
+        mostrarMensaje('exito', `${item.nombre} agregado a la sesión`)
+      })
+      .catch(err => mostrarMensaje('error', err.message))
+  }
+
+  function quitarMedicamento(uso: MedicamentoUso) {
+    if (!confirm(`¿Quitar ${uso.nombre} (${uso.cantidad_usada}) de la sesión?`)) return
+    fetch(`/api/medicamento-sesion/${uso.id}`, { method: 'DELETE' })
+      .then(async res => {
+        if (!res.ok) throw new Error('Error al quitar medicamento')
+        setModalMedicamentos(prev => prev.filter(m => m.id !== uso.id))
+        setInventarioItems(prev => prev.map(i =>
+          i.id === uso.inventario_id ? { ...i, cantidad: i.cantidad + uso.cantidad_usada } : i
+        ))
+        mostrarMensaje('exito', `${uso.nombre} quitado de la sesión`)
+      })
+      .catch(err => mostrarMensaje('error', err.message))
+  }
+
   function irSemanaAnterior() { setSemanaOffset(o => o - 1) }
   function irSemanaSiguiente() { setSemanaOffset(o => o + 1) }
   function irHoy() { setSemanaOffset(0) }
@@ -266,7 +367,11 @@ function Calendario() {
                           ) : sesiones.length > 0 ? (
                             <div className="cal-pacientes-lista">
                               {sesiones.map(s => (
-                                <div key={s.id} className="cal-paciente-item">
+                                <div
+                                  key={s.id}
+                                  className="cal-paciente-item"
+                                  onClick={e => { e.stopPropagation(); abrirModalMedicamentos(s) }}
+                                >
                                   {s.acceso && <span className="cal-paciente-acceso">{s.acceso}</span>}
                                   <span className="cal-paciente-nombre">{s.paciente_nombre || '—'}</span>
                                   {s.filtro && <span className="cal-paciente-filtro">{s.filtro}</span>}
@@ -294,6 +399,86 @@ function Calendario() {
             </table>
           </div>
         </>
+
+      )}
+
+      {modalSession && (
+        <div className="modal-overlay" onClick={cerrarModalMedicamentos}>
+          <div className="modal-contenido" onClick={e => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>
+                Medicamentos — {modalSession.paciente_nombre || '—'}
+                <span className="modal-hora">
+                  {modalSession.fecha_hora
+                    ? new Date(modalSession.fecha_hora).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })
+                    : ''}
+                </span>
+              </h2>
+              <button className="modal-cerrar" onClick={cerrarModalMedicamentos}>×</button>
+            </div>
+
+            {modalCargando ? (
+              <p className="modal-cargando">Cargando medicamentos...</p>
+            ) : (
+              <>
+                <div className="modal-lista">
+                  {modalMedicamentos.length === 0 ? (
+                    <p className="modal-vacio">Sin medicamentos registrados</p>
+                  ) : (
+                    modalMedicamentos.map(u => (
+                      <div key={u.id} className="modal-item">
+                        <span className="modal-item-nombre">{u.nombre || '—'}</span>
+                        <span className="modal-item-cantidad">{u.cantidad_usada}</span>
+                        <button className="modal-item-quitar" onClick={() => quitarMedicamento(u)}>Quitar</button>
+                      </div>
+                    ))
+                  )}
+                </div>
+
+                <div className="modal-agregar">
+                  <h3>Agregar medicamento</h3>
+                  <div className="modal-agregar-fila">
+                    <div className="modal-busqueda-wrapper">
+                      <input
+                        type="text"
+                        placeholder="Buscar medicamento..."
+                        value={modalBusqueda}
+                        onChange={e => setModalBusqueda(e.target.value)}
+                      />
+                      {modalBusqueda && (
+                        <div className="modal-resultados">
+                          {modalResultadosBusqueda.length > 0 ? (
+                            modalResultadosBusqueda.slice(0, 10).map(item => (
+                              <button
+                                key={item.id}
+                                className="modal-resultado-item"
+                                onClick={() => { setModalCantidad(1); agregarMedicamento(item) }}
+                              >
+                                <span className="modal-resultado-nombre">{item.nombre}</span>
+                                <span className="modal-resultado-stock">{item.cantidad} disp.</span>
+                              </button>
+                            ))
+                          ) : (
+                            <div className="modal-resultados-vacio">Sin resultados</div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                    <div className="modal-cantidad-wrapper">
+                      <label>Cant:</label>
+                      <input
+                        type="number"
+                        min={1}
+                        value={modalCantidad}
+                        onChange={e => setModalCantidad(Math.max(1, parseInt(e.target.value) || 1))}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
       )}
     </section>
   )
