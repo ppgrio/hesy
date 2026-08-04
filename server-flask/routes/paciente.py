@@ -26,3 +26,13 @@ def get_patients():
             'filtro': p.filtro.estado if p.filtro else None,
         })
     return jsonify(result)
+
+@paciente_bp.route('/api/filtros', methods=['GET'])
+def get_filtros():
+    filtros = Filtros.query.order_by(Filtros.id).all()
+    return jsonify([f.estado for f in filtros])
+
+@paciente_bp.route('/api/accesos', methods=['GET'])
+def get_accesos():
+    accesos = Accesos.query.order_by(Accesos.id).all()
+    return jsonify([a.tipo for a in accesos])

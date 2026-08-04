@@ -1,0 +1,35 @@
+.semana-nav {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+
+  button {
+    padding: 6px 14px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--bg);
+    color: var(--text);
+    font: 14px var(--sans);
+    cursor: pointer;
+    transition: background 0.2s, color 0.2s;
+
+    &:hover {
+      background: var(--accent-bg);
+      color: var(--text-h);
+    }
+  }
+}
+
+.semana-rango {
+  font-size: 15px;
+  color: var(--text-h);
+  font-weight: 500;
+}
+
+.contador {
+  font-size: 13px;
+  color: var(--text);
+  margin-bottom: 12px;
+}

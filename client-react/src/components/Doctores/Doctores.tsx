@@ -1,4 +1,7 @@
 import { useState, useEffect, useMemo } from 'react'
+import { useMensaje } from '../shared/hooks'
+import MensajeToast from '../shared/MensajeToast'
+import DoctorRow from './DoctorRow'
 import './Doctores.css'
 
 interface Doctor {
@@ -20,14 +23,7 @@ function Doctores() {
   const [sortKey, setSortKey] = useState<SortKey>('id')
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc')
   const [nuevoNombre, setNuevoNombre] = useState('')
-  const [editandoId, setEditandoId] = useState<number | null>(null)
-  const [editandoNombre, setEditandoNombre] = useState('')
-  const [mensaje, setMensaje] = useState<{ tipo: 'error' | 'exito'; texto: string } | null>(null)
-
-  function mostrarMensaje(tipo: 'error' | 'exito', texto: string) {
-    setMensaje({ tipo, texto })
-    setTimeout(() => setMensaje(null), 4000)
-  }
+  const { mensaje, mostrarMensaje } = useMensaje(4000)
 
   useEffect(() => {
     fetch('/api/doctor')
@@ -94,66 +90,19 @@ function Doctores() {
       .catch(err => mostrarMensaje('error', err.message))
   }
 
-  function iniciarEdicion(doctor: Doctor) {
-    setEditandoId(doctor.id)
-    setEditandoNombre(doctor.nombre)
+  function handleUpdated(doctor: Doctor) {
+    setDoctors(prev => prev.map(d => (d.id === doctor.id ? doctor : d)))
   }
 
-  function cancelarEdicion() {
-    setEditandoId(null)
-    setEditandoNombre('')
-  }
-
-  function guardarEdicion(id: number) {
-    const nombre = editandoNombre.trim()
-    if (!nombre) return
-    if (nombre.length > 20) {
-      mostrarMensaje('error', 'El nombre no puede exceder 20 caracteres')
-      return
-    }
-    fetch(`/api/doctor/${id}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ nombre }),
-    })
-      .then(async res => {
-        if (!res.ok) {
-          const err = await res.json()
-          throw new Error(err.error || 'Error al actualizar doctor')
-        }
-        return res.json()
-      })
-      .then(doctor => {
-        setDoctors(prev => prev.map(d => (d.id === id ? doctor : d)))
-        cancelarEdicion()
-        mostrarMensaje('exito', 'Doctor actualizado')
-      })
-      .catch(err => mostrarMensaje('error', err.message))
-  }
-
-  function handleDelete(id: number, nombre: string) {
-    if (!confirm(`¿Eliminar al doctor "${nombre}"?`)) return
-    fetch(`/api/doctor/${id}`, { method: 'DELETE' })
-      .then(async res => {
-        if (!res.ok) {
-          const err = await res.json()
-          throw new Error(err.error || 'Error al eliminar doctor')
-        }
-        setDoctors(prev => prev.filter(d => d.id !== id))
-        mostrarMensaje('exito', `Doctor "${nombre}" eliminado`)
-      })
-      .catch(err => mostrarMensaje('error', err.message))
+  function handleDeleted(id: number) {
+    setDoctors(prev => prev.filter(d => d.id !== id))
   }
 
   return (
     <section id="patients-page">
       <h1>Doctores</h1>
 
-      {mensaje && (
-        <p className={`mensaje ${mensaje.tipo === 'error' ? 'mensaje-error' : 'mensaje-exito'}`}>
-          {mensaje.texto}
-        </p>
-      )}
+      <MensajeToast mensaje={mensaje} />
 
       <div className="filtro-fechas">
         <input
@@ -196,36 +145,13 @@ function Doctores() {
             </thead>
             <tbody>
               {sorted.map(d => (
-                <tr key={d.id}>
-                  <td>{d.id}</td>
-                  {editandoId === d.id ? (
-                    <td>
-                      <input
-                        type="text"
-                        value={editandoNombre}
-                        onChange={e => setEditandoNombre(e.target.value)}
-                        onKeyDown={e => { if (e.key === 'Enter') guardarEdicion(d.id); if (e.key === 'Escape') cancelarEdicion() }}
-                        autoFocus
-                        className="input-editar"
-                      />
-                    </td>
-                  ) : (
-                    <td>{d.nombre}</td>
-                  )}
-                  <td>
-                    {editandoId === d.id ? (
-                      <span className="acciones-flex">
-                        <button className="btn-accion" onClick={() => guardarEdicion(d.id)}>Guardar</button>
-                        <button className="btn-accion" onClick={cancelarEdicion}>Cancelar</button>
-                      </span>
-                    ) : (
-                      <span className="acciones-flex">
-                        <button className="btn-accion" onClick={() => iniciarEdicion(d)}>Editar</button>
-                        <button className="btn-accion btn-accion-eliminar" onClick={() => handleDelete(d.id, d.nombre)}>Eliminar</button>
-                      </span>
-                    )}
-                  </td>
-                </tr>
+                <DoctorRow
+                  key={d.id}
+                  doctor={d}
+                  onUpdated={handleUpdated}
+                  onDeleted={handleDeleted}
+                  mostrarMensaje={mostrarMensaje}
+                />
               ))}
             </tbody>
           </table>

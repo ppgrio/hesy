@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react'
+import { getMonday, formatFechaCompleta } from '../shared/utils'
 import './Sesiones.css'
 
 interface Session {
@@ -28,13 +29,28 @@ function Sesiones() {
   const [sessions, setSessions] = useState<Session[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [fechaDesde, setFechaDesde] = useState('')
-  const [fechaHasta, setFechaHasta] = useState('')
+  const [semanaOffset, setSemanaOffset] = useState(0)
   const [sortKey, setSortKey] = useState<ColumnKey>('fecha')
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc')
 
+  const lunes = useMemo(() => {
+    const m = getMonday(new Date())
+    m.setDate(m.getDate() + semanaOffset * 7)
+    return m
+  }, [semanaOffset])
+
+  const domingo = useMemo(() => {
+    const d = new Date(lunes)
+    d.setDate(lunes.getDate() + 6)
+    return d
+  }, [lunes])
+
   useEffect(() => {
-    fetch('/api/session')
+    setLoading(true)
+    setError(null)
+    const desde = lunes.toISOString().split('T')[0]
+    const hasta = domingo.toISOString().split('T')[0]
+    fetch(`/api/session?desde=${desde}&hasta=${hasta}`)
       .then(res => {
         if (!res.ok) throw new Error('Error al obtener sesiones')
         return res.json()
@@ -47,7 +63,7 @@ function Sesiones() {
         setError(err.message)
         setLoading(false)
       })
-  }, [])
+  }, [lunes, domingo])
 
   const sorted = useMemo(() => {
     const sk = columnSortKey[sortKey]
@@ -63,16 +79,6 @@ function Sesiones() {
     })
   }, [sessions, sortKey, sortDir])
 
-  const filteredSessions = useMemo(() => {
-    return sorted.filter(s => {
-      if (!s.fecha_hora) return false
-      const fecha = s.fecha_hora.split('T')[0]
-      if (fechaDesde && fecha < fechaDesde) return false
-      if (fechaHasta && fecha > fechaHasta) return false
-      return true
-    })
-  }, [sorted, fechaDesde, fechaHasta])
-
   function handleSort(key: ColumnKey) {
     if (key === sortKey) {
       setSortDir(d => (d === 'asc' ? 'desc' : 'asc'))
@@ -82,41 +88,36 @@ function Sesiones() {
     }
   }
 
+  function irSemanaAnterior() { setSemanaOffset(o => o - 1) }
+  function irSemanaSiguiente() { setSemanaOffset(o => o + 1) }
+  function irHoy() { setSemanaOffset(0) }
+
   return (
     <section id="patients-page">
       <h1>Sesiones</h1>
 
       {loading && <p className="status">Cargando sesiones...</p>}
       {error && <p className="status error">{error}</p>}
-      {!loading && !error && sessions.length === 0 && (
-        <p className="status">No hay sesiones registradas.</p>
-      )}
 
-      {!loading && !error && sessions.length > 0 && (
+      {!loading && !error && (
         <>
-          <div className="filtro-fechas">
-            <label>
-              Desde:
-              <input type="date" value={fechaDesde} onChange={e => setFechaDesde(e.target.value)} />
-            </label>
-            <label>
-              Hasta:
-              <input type="date" value={fechaHasta} onChange={e => setFechaHasta(e.target.value)} />
-            </label>
-            {(fechaDesde || fechaHasta) && (
-              <button onClick={() => { setFechaDesde(''); setFechaHasta('') }}>
-                Limpiar filtro
-              </button>
-            )}
+          <div className="semana-nav">
+            <button onClick={irSemanaAnterior}>← Semana anterior</button>
+            <span className="semana-rango">
+              Semana del {formatFechaCompleta(lunes)} al {formatFechaCompleta(domingo)}
+            </span>
+            <button onClick={irSemanaSiguiente}>Semana siguiente →</button>
+            {semanaOffset !== 0 && <button onClick={irHoy}>Hoy</button>}
           </div>
 
           <p className="contador">
-            Mostrando {filteredSessions.length} de {sessions.length} sesiones
+            {sessions.length === 0
+              ? 'No hay sesiones en esta semana'
+              : `${sessions.length} sesión(es) en esta semana`
+            }
           </p>
 
-          {filteredSessions.length === 0 ? (
-            <p className="status">No hay sesiones en el rango seleccionado.</p>
-          ) : (
+          {sessions.length > 0 && (
             <div className="table-wrapper">
               <table>
                 <thead>
@@ -136,7 +137,7 @@ function Sesiones() {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredSessions.map(s => {
+                  {sorted.map(s => {
                     const fecha = s.fecha_hora ? new Date(s.fecha_hora) : null
                     const fechaStr = fecha
                       ? fecha.toLocaleDateString('es-MX', { day: '2-digit', month: '2-digit', year: 'numeric' })

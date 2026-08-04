@@ -9,7 +9,7 @@ class Pacientes(db.Model):
     acceso_id = db.Column(db.Integer, db.ForeignKey('accesos.id'))
     doctor_id = db.Column(db.Integer, db.ForeignKey('doctores.id'))
     observaciones = db.Column(db.String(20))
-
+    
     #filtros
     filtro_id = db.Column(db.Integer, db.ForeignKey('filtros.id'))
     fecha_inicio_filtro = db.Column(db.Date)

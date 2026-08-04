@@ -2,29 +2,62 @@ from flask import Blueprint, jsonify, request
 from models.init import db
 from models.sesiones import Sesiones
 from models.pacientes import Pacientes
+from models.accesos import Accesos
+from models.filtros import Filtros
 from models.medicamentos_sesion import MedicamentosSesion
 from models.inventario import Inventario
+from sqlalchemy.orm import joinedload
 from sqlalchemy.exc import IntegrityError
+from datetime import datetime, timedelta
 
 sesion_bp = Blueprint('sesion', __name__)
 
-@sesion_bp.route('/api/session')
-def get_sessions():
-    sesiones = Sesiones.query.all()
-    return jsonify([{
+def sesion_to_dict(s):
+    filtro_estado = s.filtro.estado if s.filtro else (s.paciente.filtro.estado if s.paciente and s.paciente.filtro else None)
+    acceso_tipo = s.acceso.tipo if s.acceso else (s.paciente.acceso.tipo if s.paciente and s.paciente.acceso else None)
+    return {
         'id': s.id,
         'paciente_id': s.paciente_id,
         'paciente_nombre': s.paciente.nombre if s.paciente else None,
-        'acceso': s.paciente.acceso.tipo if s.paciente and s.paciente.acceso else None,
-        'filtro': s.paciente.filtro.estado if s.paciente and s.paciente.filtro else None,
+        'acceso': acceso_tipo,
+        'filtro': filtro_estado,
         'fecha_hora': s.fecha_hora.isoformat() if s.fecha_hora else None,
-    } for s in sesiones])
+    }
+
+@sesion_bp.route('/api/session')
+def get_sessions():
+    desde = request.args.get('desde')
+    hasta = request.args.get('hasta')
+
+    query = Sesiones.query.options(
+        joinedload(Sesiones.paciente).joinedload(Pacientes.acceso),
+        joinedload(Sesiones.paciente).joinedload(Pacientes.filtro),
+        joinedload(Sesiones.acceso),
+        joinedload(Sesiones.filtro)
+    )
+
+    if desde:
+        try:
+            query = query.filter(Sesiones.fecha_hora >= datetime.fromisoformat(desde))
+        except ValueError:
+            return jsonify({'error': 'formato de desde inválido'}), 400
+
+    if hasta:
+        try:
+            query = query.filter(Sesiones.fecha_hora < datetime.fromisoformat(hasta) + timedelta(days=1))
+        except ValueError:
+            return jsonify({'error': 'formato de hasta inválido'}), 400
+
+    sesiones = query.order_by(Sesiones.fecha_hora.desc()).all()
+    return jsonify([sesion_to_dict(s) for s in sesiones])
 
 @sesion_bp.route('/api/session', methods=['POST'])
 def create_session():
     data = request.get_json()
     paciente_id = data.get('paciente_id')
     fecha_hora_str = data.get('fecha_hora')
+    tipo_de_filtro = data.get('filtro')
+    tipo_de_acceso = data.get('acceso')
 
     if not paciente_id or not fecha_hora_str:
         return jsonify({'error': 'paciente_id y fecha_hora son obligatorios'}), 400
@@ -39,18 +72,30 @@ def create_session():
     except ValueError:
         return jsonify({'error': 'Formato de fecha_hora inválido'}), 400
 
-    sesion = Sesiones(paciente_id=paciente_id, fecha_hora=fecha_hora)
+    filtro_id = paciente.filtro_id
+    if tipo_de_filtro:
+        filtro = Filtros.query.filter_by(estado=tipo_de_filtro).first()
+        if not filtro:
+            return jsonify({'error': f'Filtro "{tipo_de_filtro}" no válido'}), 400
+        filtro_id = filtro.id
+
+    acceso_id = paciente.acceso_id
+    if tipo_de_acceso:
+        acceso = Accesos.query.filter_by(tipo=tipo_de_acceso).first()
+        if not acceso:
+            return jsonify({'error': f'Acceso "{tipo_de_acceso}" no válido'}), 400
+        acceso_id = acceso.id
+
+    sesion = Sesiones(
+        paciente_id=paciente_id,
+        fecha_hora=fecha_hora,
+        filtro_sesion=filtro_id,
+        acceso_sesion=acceso_id,
+    )
     db.session.add(sesion)
     db.session.commit()
 
-    return jsonify({
-        'id': sesion.id,
-        'paciente_id': sesion.paciente_id,
-        'paciente_nombre': sesion.paciente.nombre if sesion.paciente else None,
-        'acceso': sesion.paciente.acceso.tipo if sesion.paciente and sesion.paciente.acceso else None,
-        'filtro': sesion.paciente.filtro.estado if sesion.paciente and sesion.paciente.filtro else None,
-        'fecha_hora': sesion.fecha_hora.isoformat() if sesion.fecha_hora else None,
-    }), 201
+    return jsonify(sesion_to_dict(sesion)), 201
 
 @sesion_bp.route('/api/session/<int:id>', methods=['DELETE'])
 def delete_session(id):
