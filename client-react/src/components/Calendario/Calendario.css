@@ -102,8 +102,6 @@
 
   .cal-celda {
     padding: 0;
-    min-width: 90px;
-    min-height: 32px;
     cursor: pointer;
     position: relative;
 
@@ -112,15 +110,22 @@
     }
   }
 
+  .celda_para_centrar {
+    min-height: 32px;
+    display: flex;
+    flex-direction: column;
+  }
+
   .cal-vacio {
+    margin: auto 0;
     display: flex;
     align-items: center;
     justify-content: center;
-    height: 100%;
-    min-height: 32px;
   }
 
   .cal-mas {
+    vertical-align: center;
+    text-align: center;
     opacity: 0;
     font-size: 20px;
     color: var(--accent);
@@ -131,7 +136,7 @@
   .cal-pacientes-lista {
     display: flex;
     flex-direction: column;
-    gap: 1px;
+    gap: 2px;
     padding: 2px;
   }
 

@@ -36,8 +36,8 @@ function CalendarioGrid({ dias, getSesionesEnSlot, onSlotClick, onSessionClick, 
                     className="cal-celda"
                     onClick={() => onSlotClick(diaIdx, hora)}
                   >
-                    {sesiones.length > 0 ? (
-                      <div className="cal-pacientes-lista">
+                    <div className='celda_para_centrar'>
+                    <div className="cal-pacientes-lista">
                         {sesiones.map(s => (
                           <div
                             key={s.id}
@@ -57,11 +57,8 @@ function CalendarioGrid({ dias, getSesionesEnSlot, onSlotClick, onSessionClick, 
                           </div>
                         ))}
                       </div>
-                    ) : (
-                      <div className="cal-vacio">
                         <span className="cal-mas">+</span>
                       </div>
-                    )}
                   </td>
                 )
               })}
