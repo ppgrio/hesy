@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react'
 import type { Session, Patient, SlotBusqueda, InventarioItem, MedicamentoUso } from './types'
-import { getMonday, formatFechaCompleta, roundToSlot, toSlotKey, formatISOtoDatetime } from './utils'
+import { getMonday, formatFechaCompleta, normalizar, roundToSlot, toSlotKey, formatISOtoDatetime } from './utils'
 import { useMensaje } from '../shared/hooks'
 import MensajeToast from '../shared/MensajeToast'
 import CalendarioGrid from './CalendarioGrid'
@@ -122,9 +122,9 @@ function Calendario() {
 
   const resultadosBusqueda = useMemo(() => {
     if (!textoBusqueda.trim()) return []
-    const q = textoBusqueda.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    const q = normalizar(textoBusqueda)
     return pacientes.filter(p =>
-      p.nombre.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').includes(q)
+      normalizar(p.nombre).includes(q)
     )
   }, [textoBusqueda, pacientes])
 
@@ -175,7 +175,7 @@ function Calendario() {
       .then(nuevaSession => {
         setSessions(prev => [...prev, nuevaSession])
         cerrarModalCrear()
-        mostrarMensaje('exito', `${pacienteSeleccionado.nombre} agregado a la sesión`)
+        mostrarMensaje('exito', `sesión creada para ${pacienteSeleccionado.nombre}`)
       })
       .catch(err => mostrarMensaje('error', err.message))
   }

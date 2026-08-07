@@ -18,6 +18,9 @@ function Navbar() {
         <NavLink to="/calendario" className={({ isActive }) => isActive ? 'active' : ''}>
           Calendario
         </NavLink>
+        <NavLink to="/inventario" className={({ isActive }) => isActive ? 'active' : ''}>
+          Inventario
+        </NavLink>
       </div>
     </nav>
   )

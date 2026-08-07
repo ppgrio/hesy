@@ -47,30 +47,30 @@ filtros_estados = ['Nuevo', 'Reuso', 'Desechable']
 areas_nombres = ['Bodega', 'Carrito rojo', 'Administracion']
 
 inventario_items = [
-    ('Heparina', 5000, 120),
-    ('Suero Fisiológico 500ml', 10000, 90),
-    ('Suero Fisiológico 1000ml', 8000, 90),
-    ('Agua Estéril 500ml', 6000, 180),
-    ('Bicarbonato 100ml', 3000, 60),
-    ('Dializador FX80', 200, 730),
-    ('Dializador FX100', 150, 730),
-    ('Línea Arterial', 500, 730),
-    ('Línea Venosa', 500, 730),
-    ('Fístula Aguja 15G', 1000, 365),
-    ('Fístula Aguja 16G', 1000, 365),
-    ('Jeringa 5ml', 2000, 730),
-    ('Jeringa 10ml', 1500, 730),
-    ('Gasas Estériles 10x10', 5000, 365),
-    ('Guantes Estériles #7', 800, 730),
-    ('Guantes Estériles #7.5', 800, 730),
-    ('Guantes Estériles #8', 600, 730),
-    ('Cloruro Sódico 20% 10ml', 2000, 90),
-    ('Gluconato de Calcio 10ml', 1000, 60),
-    ('Parche Hemostático', 500, 365),
-    ('Cinta Adhesiva', 300, 730),
-    ('Apósito Transparente', 1000, 730),
-    ('Clorhexidina 500ml', 400, 180),
-    ('Povidona Yodada 500ml', 400, 180),
+    (1001, 'Heparina', 5000, 120),
+    (1002, 'Suero Fisiológico 500ml', 10000, 90),
+    (1003, 'Suero Fisiológico 1000ml', 8000, 90),
+    (1004, 'Agua Estéril 500ml', 6000, 180),
+    (1005, 'Bicarbonato 100ml', 3000, 60),
+    (1006, 'Dializador FX80', 200, 730),
+    (1007, 'Dializador FX100', 150, 730),
+    (1008, 'Línea Arterial', 500, 730),
+    (1009, 'Línea Venosa', 500, 730),
+    (1010, 'Fístula Aguja 15G', 1000, 365),
+    (1011, 'Fístula Aguja 16G', 1000, 365),
+    (1012, 'Jeringa 5ml', 2000, 730),
+    (1013, 'Jeringa 10ml', 1500, 730),
+    (1014, 'Gasas Estériles 10x10', 5000, 365),
+    (1015, 'Guantes Estériles #7', 800, 730),
+    (1016, 'Guantes Estériles #7.5', 800, 730),
+    (1017, 'Guantes Estériles #8', 600, 730),
+    (1018, 'Cloruro Sódico 20% 10ml', 2000, 90),
+    (1019, 'Gluconato de Calcio 10ml', 1000, 60),
+    (1020, 'Parche Hemostático', 500, 365),
+    (1021, 'Cinta Adhesiva', 300, 730),
+    (1022, 'Apósito Transparente', 1000, 730),
+    (1023, 'Clorhexidina 500ml', 400, 180),
+    (1024, 'Povidona Yodada 500ml', 400, 180),
 ]
 
 def seed():
@@ -106,8 +106,9 @@ def seed():
         areas = Areas.query.all()
 
         print('Sembrando inventario...')
-        for nombre, cantidad, caducidad_dias in inventario_items:
+        for codigo, nombre, cantidad, caducidad_dias in inventario_items:
             db.session.add(Inventario(
+                codigo=codigo,
                 nombre=nombre,
                 cantidad=cantidad,
                 caducidad=date(2026, 7, 1) + timedelta(days=random.randint(0, 180)),

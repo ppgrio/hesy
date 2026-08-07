@@ -1,0 +1,53 @@
+.inventario-add-form {
+  flex-wrap: wrap;
+}
+
+.inventario-add-form input,
+.inventario-add-form select {
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font: 14px var(--sans);
+  color: var(--text-h);
+  background: var(--bg);
+  outline: none;
+}
+
+.inventario-add-form input[type="number"] {
+  width: 100px;
+}
+
+.inventario-add-form input[type="date"] {
+  width: 145px;
+}
+
+.inventario-add-form select {
+  width: 160px;
+}
+
+.inventario-add-form input:focus,
+.inventario-add-form select:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-bg);
+}
+
+.filtro-input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  font: 14px var(--sans);
+  color: var(--text);
+  background: transparent;
+  outline: none;
+}
+
+.filtro-input::placeholder {
+  color: var(--text);
+  opacity: 0.5;
+}
+
+.filtro-input:focus {
+  color: var(--text-h);
+}

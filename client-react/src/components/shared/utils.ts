@@ -11,4 +11,8 @@ function formatFechaCompleta(d: Date): string {
   return d.toLocaleDateString('es-MX', { day: 'numeric', month: 'long', year: 'numeric' })
 }
 
-export { getMonday, formatFechaCompleta }
+function normalizar(texto: string): string {
+  return texto.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+}
+
+export { getMonday, formatFechaCompleta, normalizar }

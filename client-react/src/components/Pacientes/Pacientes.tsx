@@ -1,5 +1,4 @@
 import { useState, useEffect, useMemo } from 'react'
-import './Pacientes.css'
 
 interface Patient {
   no_expediente: number

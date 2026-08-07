@@ -4,6 +4,7 @@ import Pacientes from './components/Pacientes'
 import Sesiones from './components/Sesiones'
 import Doctores from './components/Doctores'
 import Calendario from './components/Calendario'
+import Inventario from './components/Inventario'
 import './App.css'
 
 function App() {
@@ -15,6 +16,7 @@ function App() {
         <Route path="/sesiones" element={<Sesiones />} />
         <Route path="/doctores" element={<Doctores />} />
         <Route path="/calendario" element={<Calendario />} />
+        <Route path="/inventario" element={<Inventario />} />
         <Route path="*" element={<Navigate to="/pacientes" replace />} />
       </Routes>
     </>

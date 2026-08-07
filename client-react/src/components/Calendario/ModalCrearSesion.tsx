@@ -95,7 +95,7 @@ function ModalCrearSesion({
           </label>
 
           <div className="modal-crear-acciones">
-            <button className="modal-btn-secundario" onClick={onCancel}>Cancelar</button>
+            <button onClick={onCancel}>Cancelar</button>
             <button className="modal-btn-primario" onClick={onConfirm} disabled={!pacienteSeleccionado}>
               Agregar a la sesión
             </button>

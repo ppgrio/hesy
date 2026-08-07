@@ -4,12 +4,17 @@ from models.pacientes import Pacientes
 from models.doctores import Doctores
 from models.accesos import Accesos
 from models.filtros import Filtros
+from sqlalchemy.orm import joinedload
 
 paciente_bp = Blueprint('paciente', __name__)
 
 @paciente_bp.route('/api/patient', methods=['GET'])
 def get_patients():
-    pacientes = Pacientes.query.all()
+    pacientes = Pacientes.query.options(
+        joinedload(Pacientes.doctor),
+        joinedload(Pacientes.acceso),
+        joinedload(Pacientes.filtro),
+    ).all()
     result = []
     for p in pacientes:
         result.append({

@@ -1,9 +1,6 @@
 import { useMemo } from 'react'
 import type { Session, MedicamentoUso, InventarioItem } from './types'
-
-function normalizar(texto: string) {
-  return texto.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-}
+import { normalizar } from '../shared/utils'
 
 interface Props {
   session: Session | null

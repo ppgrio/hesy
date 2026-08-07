@@ -107,7 +107,9 @@ def delete_session(id):
 @sesion_bp.route('/api/session/<int:sesion_id>/medicamentos')
 def get_medicamentos_sesion(sesion_id):
     Sesiones.query.get_or_404(sesion_id)
-    usos = MedicamentosSesion.query.filter_by(sesion_id=sesion_id).all()
+    usos = MedicamentosSesion.query.options(
+        joinedload(MedicamentosSesion.inventario_item),
+    ).filter_by(sesion_id=sesion_id).all()
     return jsonify([{
         'id': u.id,
         'inventario_id': u.inventario_id,

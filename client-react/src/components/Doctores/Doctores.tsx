@@ -2,7 +2,6 @@ import { useState, useEffect, useMemo } from 'react'
 import { useMensaje } from '../shared/hooks'
 import MensajeToast from '../shared/MensajeToast'
 import DoctorRow from './DoctorRow'
-import './Doctores.css'
 
 interface Doctor {
   id: number
