@@ -48,7 +48,7 @@ function Inventario() {
   const [nuevaCantidad, setNuevaCantidad] = useState('')
   const [nuevaCaducidad, setNuevaCaducidad] = useState('')
   const [nuevaAreaId, setNuevaAreaId] = useState('')
-  const [filtros, setFiltros] = useState<Filtros>({ id: '', codigo: '', nombre: '', cantidad: '', caducidad: '', area: '' })
+  const [filtros, setFiltros] = useState<Filtros>({ id: '', codigo: '', nombre: '', cantidad: '', caducidad: '', area_id:'', area: '' })
   const { mensaje, mostrarMensaje } = useMensaje(4000)
 
   useEffect(() => {
