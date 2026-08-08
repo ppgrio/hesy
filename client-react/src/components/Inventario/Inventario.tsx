@@ -50,6 +50,7 @@ function Inventario() {
   const [nuevaAreaId, setNuevaAreaId] = useState('')
   const [filtros, setFiltros] = useState<Filtros>({ id: '', codigo: '', nombre: '', cantidad: '', caducidad: '', area_id:'', area: '' })
   const { mensaje, mostrarMensaje } = useMensaje(4000)
+  const [modalOpen, setModalOpen] = useState(false)
 
   useEffect(() => {
     Promise.all([
@@ -147,6 +148,7 @@ function Inventario() {
         setNuevaCantidad('')
         setNuevaCaducidad('')
         setNuevaAreaId('')
+        setModalOpen(false)
         mostrarMensaje('exito', `Item "${item.nombre}" agregado`)
       })
       .catch(err => mostrarMensaje('error', err.message))
@@ -162,50 +164,63 @@ function Inventario() {
 
   return (
     <section id="patients-page">
-      <h1>Inventario</h1>
+      <div className="inventario-header">
+        <h1>Inventario</h1>
+        <button className="btn-agregar" onClick={() => setModalOpen(true)}>+ Agregar Item</button>
+      </div>
 
       <MensajeToast mensaje={mensaje} />
 
-      <div className="filtro-fechas inventario-add-form">
-        <input
-          type="text"
-          inputMode="numeric"
-          placeholder="Código"
-          value={nuevoCodigo}
-          onChange={e => setNuevoCodigo(e.target.value)}
-          onKeyDown={e => { if (e.key === 'Enter') handleAdd() }}
-        />
-        <input
-          type="text"
-          placeholder="Nombre"
-          value={nuevoNombre}
-          onChange={e => setNuevoNombre(e.target.value)}
-          onKeyDown={e => { if (e.key === 'Enter') handleAdd() }}
-        />
-        <input
-          type="number"
-          placeholder="Cantidad"
-          value={nuevaCantidad}
-          onChange={e => setNuevaCantidad(e.target.value)}
-          onKeyDown={e => { if (e.key === 'Enter') handleAdd() }}
-          min="0"
-        />
-        <input
-          type="date"
-          value={nuevaCaducidad}
-          onChange={e => setNuevaCaducidad(e.target.value)}
-        />
-        <select
-          value={nuevaAreaId}
-          onChange={e => setNuevaAreaId(e.target.value)}
-        >
-          <option value="">Sin área</option>
-          {areas.map(a => (
-            <option key={a.id} value={a.id}>{a.nombre}</option>
-          ))}
-        </select>
-        <button onClick={handleAdd}>Agregar</button>
-      </div>
+      {modalOpen && (
+        <div className="modal-overlay" onClick={() => setModalOpen(false)}>
+          <div className="modal-contenido" onClick={e => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>Agregar Item</h2>
+              <button className="modal-cerrar" onClick={() => setModalOpen(false)}>×</button>
+            </div>
+            <div className="modal-cuerpo">
+              <input
+                type="text"
+                inputMode="numeric"
+                placeholder="Código"
+                value={nuevoCodigo}
+                onChange={e => setNuevoCodigo(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter') handleAdd() }}
+              />
+              <input
+                type="text"
+                placeholder="Nombre"
+                value={nuevoNombre}
+                onChange={e => setNuevoNombre(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter') handleAdd() }}
+              />
+              <input
+                type="number"
+                placeholder="Cantidad"
+                value={nuevaCantidad}
+                onChange={e => setNuevaCantidad(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter') handleAdd() }}
+                min="0"
+              />
+              <input
+                type="date"
+                value={nuevaCaducidad}
+                onChange={e => setNuevaCaducidad(e.target.value)}
+              />
+              <select
+                value={nuevaAreaId}
+                onChange={e => setNuevaAreaId(e.target.value)}
+              >
+                <option value="">Sin área</option>
+                {areas.map(a => (
+                  <option key={a.id} value={a.id}>{a.nombre}</option>
+                ))}
+              </select>
+              <button onClick={handleAdd}>Agregar</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {loading && <p className="status">Cargando inventario...</p>}
       {error && <p className="status error">{error}</p>}

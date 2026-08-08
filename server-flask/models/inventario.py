@@ -6,7 +6,7 @@ class Inventario(db.Model):
     )
     id = db.Column(db.Integer, primary_key=True)
     codigo = db.Column(db.Integer, unique=True, nullable=True)
-    nombre = db.Column(db.String(30), nullable=False, unique = True)
+    nombre = db.Column(db.String(100), nullable=False, unique = True)
     cantidad = db.Column(db.Integer, nullable = False)
     caducidad = db.Column(db.Date)
     area_id = db.Column(db.Integer, db.ForeignKey('areas.id'))

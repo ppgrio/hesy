@@ -1,34 +1,106 @@
-.inventario-add-form {
-  flex-wrap: wrap;
+.inventario-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
 }
 
-.inventario-add-form input,
-.inventario-add-form select {
-  padding: 6px 10px;
+.btn-agregar {
+  padding: 6px 14px;
   border: 1px solid var(--border);
-  border-radius: 4px;
+  border-radius: 6px;
+  background: var(--accent);
+  color: #fff;
   font: 14px var(--sans);
-  color: var(--text-h);
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btn-agregar:hover {
+  background: var(--border);
+}
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+
+.modal-contenido {
   background: var(--bg);
-  outline: none;
+  border-radius: 8px;
+  width: 460px;
+  max-width: 90vw;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
 }
 
-.inventario-add-form input[type="number"] {
-  width: 100px;
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+
+  h2 {
+    margin: 0;
+    font-size: 16px;
+  }
 }
 
-.inventario-add-form input[type="date"] {
-  width: 145px;
+.modal-cerrar {
+  background: none;
+  border: none;
+  font-size: 22px;
+  color: var(--text);
+  cursor: pointer;
+  padding: 0 4px;
+  line-height: 1;
+
+  &:hover {
+    color: var(--text-h);
+  }
 }
 
-.inventario-add-form select {
-  width: 160px;
-}
+.modal-cuerpo {
+  padding: 16px 20px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
 
-.inventario-add-form input:focus,
-.inventario-add-form select:focus {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 2px var(--accent-bg);
+  input,
+  select,
+  button {
+    padding: 6px 10px;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    font: 14px var(--sans);
+    color: var(--text-h);
+    background: var(--bg);
+    outline: none;
+    width: 90%;
+    box-sizing: border-box;
+  }
+
+  button {
+    border-radius: 6px;
+    background: var(--accent);
+    color: #fff;
+    cursor: pointer;
+
+    &:hover {
+      background: var(--border);
+    }
+  }
+
+  input:focus,
+  select:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px var(--accent-bg);
+  }
 }
 
 .filtro-input {
