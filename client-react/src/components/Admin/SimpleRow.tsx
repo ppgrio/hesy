@@ -1,88 +1,95 @@
 import { useState } from 'react'
 
-interface Doctor {
+interface SimpleItem {
   id: number
-  nombre: string
+  value: string
 }
 
 interface Props {
-  doctor: Doctor
-  onUpdated: (doctor: Doctor) => void
+  item: SimpleItem
+  apiUrl: string
+  fieldKey: string
+  entityName: string
+  maxLength: number
+  onUpdated: (item: SimpleItem) => void
   onDeleted: (id: number) => void
   mostrarMensaje: (tipo: 'error' | 'exito', texto: string) => void
 }
 
-function DoctorRow({ doctor, onUpdated, onDeleted, mostrarMensaje }: Props) {
+function SimpleRow({ item, apiUrl, fieldKey, entityName, maxLength, onUpdated, onDeleted, mostrarMensaje }: Props) {
   const [editing, setEditing] = useState(false)
-  const [editName, setEditName] = useState('')
+  const [editValue, setEditValue] = useState('')
 
   function iniciarEdicion() {
     setEditing(true)
-    setEditName(doctor.nombre)
+    setEditValue(item.value)
   }
 
   function cancelarEdicion() {
     setEditing(false)
-    setEditName('')
   }
 
   function guardarEdicion() {
-    const nombre = editName.trim()
-    if (!nombre) return
-    if (nombre.length > 20) {
-      mostrarMensaje('error', 'El nombre no puede exceder 20 caracteres')
+    const val = editValue.trim()
+    if (!val) {
+      mostrarMensaje('error', `El ${fieldKey} es obligatorio`)
       return
     }
-    fetch(`/api/doctor/${doctor.id}`, {
+    if (val.length > maxLength) {
+      mostrarMensaje('error', `No puede exceder ${maxLength} caracteres`)
+      return
+    }
+    fetch(`${apiUrl}/${item.id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ nombre }),
+      body: JSON.stringify({ [fieldKey]: val }),
     })
       .then(async res => {
         if (!res.ok) {
           const err = await res.json()
-          throw new Error(err.error || 'Error al actualizar doctor')
+          throw new Error(err.error || `Error al actualizar ${entityName.toLowerCase()}`)
         }
         return res.json()
       })
       .then(updated => {
-        onUpdated(updated)
+        const value = updated[fieldKey] ?? updated.nombre ?? updated.tipo ?? updated.estado ?? ''
+        onUpdated({ id: updated.id, value })
         cancelarEdicion()
-        mostrarMensaje('exito', 'Doctor actualizado')
+        mostrarMensaje('exito', `${entityName} actualizado`)
       })
       .catch(err => mostrarMensaje('error', err.message))
   }
 
   function handleDelete() {
-    if (!confirm(`¿Eliminar al doctor "${doctor.nombre}"?`)) return
-    fetch(`/api/doctor/${doctor.id}`, { method: 'DELETE' })
+    if (!confirm(`¿Eliminar ${entityName.toLowerCase()} "${item.value}"?`)) return
+    fetch(`${apiUrl}/${item.id}`, { method: 'DELETE' })
       .then(async res => {
         if (!res.ok) {
           const err = await res.json()
-          throw new Error(err.error || 'Error al eliminar doctor')
+          throw new Error(err.error || `Error al eliminar ${entityName.toLowerCase()}`)
         }
-        onDeleted(doctor.id)
-        mostrarMensaje('exito', `Doctor "${doctor.nombre}" eliminado`)
+        onDeleted(item.id)
+        mostrarMensaje('exito', `${entityName} "${item.value}" eliminado`)
       })
       .catch(err => mostrarMensaje('error', err.message))
   }
 
   return (
     <tr>
-      <td>{doctor.id}</td>
+      <td>{item.id}</td>
       {editing ? (
         <td>
           <input
             type="text"
-            value={editName}
-            onChange={e => setEditName(e.target.value)}
+            value={editValue}
+            onChange={e => setEditValue(e.target.value)}
             onKeyDown={e => { if (e.key === 'Enter') guardarEdicion(); if (e.key === 'Escape') cancelarEdicion() }}
             autoFocus
             className="input-editar"
           />
         </td>
       ) : (
-        <td>{doctor.nombre}</td>
+        <td>{item.value}</td>
       )}
       <td>
         {editing ? (
@@ -101,4 +108,5 @@ function DoctorRow({ doctor, onUpdated, onDeleted, mostrarMensaje }: Props) {
   )
 }
 
-export default DoctorRow
+export default SimpleRow
+export type { SimpleItem }

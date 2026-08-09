@@ -153,9 +153,3 @@ def delete_inventario(id):
     db.session.delete(item)
     db.session.commit()
     return jsonify({'success': True})
-
-
-@inventario_bp.route('/api/areas')
-def get_areas():
-    areas = Areas.query.all()
-    return jsonify([{'id': a.id, 'nombre': a.nombre} for a in areas])

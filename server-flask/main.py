@@ -4,6 +4,9 @@ from routes.paciente import paciente_bp
 from routes.sesion import sesion_bp
 from routes.doctor import doctor_bp
 from routes.inventario import inventario_bp
+from routes.acceso import acceso_bp
+from routes.filtro import filtro_bp
+from routes.area import area_bp
 from models.init import db
 from models.pacientes import Pacientes
 from models.doctores import Doctores
@@ -23,6 +26,9 @@ app.register_blueprint(paciente_bp)
 app.register_blueprint(sesion_bp)
 app.register_blueprint(doctor_bp)
 app.register_blueprint(inventario_bp)
+app.register_blueprint(acceso_bp)
+app.register_blueprint(filtro_bp)
+app.register_blueprint(area_bp)
 
 with app.app_context():
     db.create_all()

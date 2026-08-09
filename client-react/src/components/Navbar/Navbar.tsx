@@ -12,14 +12,14 @@ function Navbar() {
         <NavLink to="/sesiones" className={({ isActive }) => isActive ? 'active' : ''}>
           Sesiones
         </NavLink>
-        <NavLink to="/doctores" className={({ isActive }) => isActive ? 'active' : ''}>
-          Doctores
-        </NavLink>
         <NavLink to="/calendario" className={({ isActive }) => isActive ? 'active' : ''}>
           Calendario
         </NavLink>
         <NavLink to="/inventario" className={({ isActive }) => isActive ? 'active' : ''}>
           Inventario
+        </NavLink>
+        <NavLink to="/admin" className={({ isActive }) => isActive ? 'active' : ''}>
+          Admin
         </NavLink>
       </div>
     </nav>

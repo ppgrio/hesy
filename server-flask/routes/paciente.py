@@ -220,18 +220,6 @@ def delete_patient(no_expediente):
     return jsonify({'success': True})
 
 
-@paciente_bp.route('/api/filtros', methods=['GET'])
-def get_filtros():
-    filtros = Filtros.query.order_by(Filtros.id).all()
-    return jsonify([{'id': f.id, 'estado': f.estado} for f in filtros])
-
-
-@paciente_bp.route('/api/accesos', methods=['GET'])
-def get_accesos():
-    accesos = Accesos.query.order_by(Accesos.id).all()
-    return jsonify([{'id': a.id, 'tipo': a.tipo} for a in accesos])
-
-
 @paciente_bp.route('/api/doctores', methods=['GET'])
 def get_doctores():
     doctores = Doctores.query.order_by(Doctores.nombre).all()
