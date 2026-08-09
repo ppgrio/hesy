@@ -87,7 +87,7 @@
     color: var(--text-h);
     background: var(--bg);
     outline: none;
-    width: 90%;
+    width: 100%;
     box-sizing: border-box;
   }
 

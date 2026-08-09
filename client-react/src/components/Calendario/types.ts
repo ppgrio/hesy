@@ -33,4 +33,14 @@ interface SlotBusqueda {
   hora: string
 }
 
-export type { Session, Patient, InventarioItem, MedicamentoUso, SlotBusqueda }
+interface FiltroOption {
+  id: number
+  estado: string
+}
+
+interface AccesoOption {
+  id: number
+  tipo: string
+}
+
+export type { Session, Patient, InventarioItem, MedicamentoUso, SlotBusqueda, FiltroOption, AccesoOption }

@@ -1,11 +1,12 @@
 import { useState, useEffect, useMemo } from 'react'
-import type { Session, Patient, SlotBusqueda, InventarioItem, MedicamentoUso } from './types'
+import type { Session, Patient, SlotBusqueda, InventarioItem, MedicamentoUso, FiltroOption, AccesoOption } from './types'
 import { getMonday, formatFechaCompleta, normalizar, roundToSlot, toSlotKey, formatISOtoDatetime } from './utils'
 import { useMensaje } from '../shared/hooks'
 import MensajeToast from '../shared/MensajeToast'
 import CalendarioGrid from './CalendarioGrid'
 import ModalCrearSesion from './ModalCrearSesion'
 import ModalMedicamentos from './ModalMedicamentos'
+import '../shared/crud.css'
 import './Calendario.css'
 
 function Calendario() {
@@ -15,12 +16,11 @@ function Calendario() {
   const [error, setError] = useState<string | null>(null)
   const [semanaOffset, setSemanaOffset] = useState(0)
   const [modalCrear, setModalCrear] = useState<SlotBusqueda | null>(null)
-  const [textoBusqueda, setTextoBusqueda] = useState('')
-  const [pacienteSeleccionado, setPacienteSeleccionado] = useState<Patient | null>(null)
+  const [pacienteId, setPacienteId] = useState('')
   const [filtroSeleccionado, setFiltroSeleccionado] = useState('')
   const [accesoSeleccionado, setAccesoSeleccionado] = useState('')
-  const [opcionesFiltro, setOpcionesFiltro] = useState<string[]>([])
-  const [opcionesAcceso, setOpcionesAcceso] = useState<string[]>([])
+  const [opcionesFiltro, setOpcionesFiltro] = useState<FiltroOption[]>([])
+  const [opcionesAcceso, setOpcionesAcceso] = useState<AccesoOption[]>([])
   const { mensaje, mostrarMensaje } = useMensaje(3000)
   const [modalSession, setModalSession] = useState<Session | null>(null)
   const [modalMedicamentos, setModalMedicamentos] = useState<MedicamentoUso[]>([])
@@ -106,60 +106,42 @@ function Calendario() {
 
   function handleSlotClick(diaIdx: number, hora: string) {
     setModalCrear({ diaIdx, hora })
-    setTextoBusqueda('')
-    setPacienteSeleccionado(null)
+    setPacienteId('')
     setFiltroSeleccionado('')
     setAccesoSeleccionado('')
   }
 
   function cerrarModalCrear() {
     setModalCrear(null)
-    setTextoBusqueda('')
-    setPacienteSeleccionado(null)
+    setPacienteId('')
     setFiltroSeleccionado('')
     setAccesoSeleccionado('')
   }
 
-  const resultadosBusqueda = useMemo(() => {
-    if (!textoBusqueda.trim()) return []
-    const q = normalizar(textoBusqueda)
-    return pacientes.filter(p =>
-      normalizar(p.nombre).includes(q)
-    )
-  }, [textoBusqueda, pacientes])
-
-  const opcionesFiltroCompleto = useMemo(() => {
-    const opts = [...opcionesFiltro]
-    if (pacienteSeleccionado?.filtro && !opts.includes(pacienteSeleccionado.filtro)) {
-      opts.push(pacienteSeleccionado.filtro)
+  function handlePacienteChange(id: string) {
+    setPacienteId(id)
+    if (id) {
+      const p = pacientes.find(p => p.no_expediente === parseInt(id, 10))
+      if (p) {
+        setFiltroSeleccionado(p.filtro || '')
+        setAccesoSeleccionado(p.acceso || '')
+        return
+      }
     }
-    return opts
-  }, [opcionesFiltro, pacienteSeleccionado])
-
-  const opcionesAccesoCompleto = useMemo(() => {
-    const opts = [...opcionesAcceso]
-    if (pacienteSeleccionado?.acceso && !opts.includes(pacienteSeleccionado.acceso)) {
-      opts.push(pacienteSeleccionado.acceso)
-    }
-    return opts
-  }, [opcionesAcceso, pacienteSeleccionado])
-
-  function handleSelectPaciente(p: Patient) {
-    setPacienteSeleccionado(p)
-    setTextoBusqueda(p.nombre)
-    setFiltroSeleccionado(p.filtro || '')
-    setAccesoSeleccionado(p.acceso || '')
+    setFiltroSeleccionado('')
+    setAccesoSeleccionado('')
   }
 
   function crearSesion() {
-    if (!modalCrear || !pacienteSeleccionado) return
+    if (!modalCrear || !pacienteId) return
     const { diaIdx, hora } = modalCrear
     const fecha_hora = formatISOtoDatetime(dias[diaIdx], hora)
+    const p = pacientes.find(p => p.no_expediente === parseInt(pacienteId, 10))
     fetch('/api/session', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        paciente_id: pacienteSeleccionado.no_expediente,
+        paciente_id: parseInt(pacienteId, 10),
         fecha_hora,
         filtro: filtroSeleccionado || null,
         acceso: accesoSeleccionado || null,
@@ -175,7 +157,7 @@ function Calendario() {
       .then(nuevaSession => {
         setSessions(prev => [...prev, nuevaSession])
         cerrarModalCrear()
-        mostrarMensaje('exito', `sesión creada para ${pacienteSeleccionado.nombre}`)
+        mostrarMensaje('exito', `Sesión creada para ${p?.nombre || 'paciente'}`)
       })
       .catch(err => mostrarMensaje('error', err.message))
   }
@@ -301,17 +283,15 @@ function Calendario() {
       <ModalCrearSesion
         slot={modalCrear}
         dias={dias}
-        textoBusqueda={textoBusqueda}
-        onTextoBusquedaChange={(t) => { setTextoBusqueda(t); setPacienteSeleccionado(null); setFiltroSeleccionado(''); setAccesoSeleccionado('') }}
-        pacienteSeleccionado={pacienteSeleccionado}
+        pacientes={pacientes}
+        pacienteId={pacienteId}
+        onPacienteIdChange={handlePacienteChange}
         filtroSeleccionado={filtroSeleccionado}
         onFiltroChange={setFiltroSeleccionado}
         accesoSeleccionado={accesoSeleccionado}
         onAccesoChange={setAccesoSeleccionado}
-        resultadosBusqueda={resultadosBusqueda}
-        opcionesFiltro={opcionesFiltroCompleto}
-        opcionesAcceso={opcionesAccesoCompleto}
-        onSelectPaciente={handleSelectPaciente}
+        opcionesFiltro={opcionesFiltro}
+        opcionesAcceso={opcionesAcceso}
         onCancel={cerrarModalCrear}
         onConfirm={crearSesion}
       />
