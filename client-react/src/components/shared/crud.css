@@ -37,6 +37,12 @@
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
 }
 
+.modal-contenido.modal-ancho {
+  width: 560px;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
 .modal-header {
   display: flex;
   align-items: center;

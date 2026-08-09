@@ -15,4 +15,9 @@ function normalizar(texto: string): string {
   return texto.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
 }
 
-export { getMonday, formatFechaCompleta, normalizar }
+function matchFilter(value: unknown, q: string): boolean {
+  if (value == null) return q === ''
+  return String(value).toLowerCase().includes(q)
+}
+
+export { getMonday, formatFechaCompleta, normalizar, matchFilter }

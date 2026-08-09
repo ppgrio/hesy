@@ -97,6 +97,54 @@ def create_session():
 
     return jsonify(sesion_to_dict(sesion)), 201
 
+@sesion_bp.route('/api/session/<int:id>', methods=['PUT'])
+def update_session(id):
+    sesion = Sesiones.query.options(
+        joinedload(Sesiones.paciente).joinedload(Pacientes.acceso),
+        joinedload(Sesiones.paciente).joinedload(Pacientes.filtro),
+        joinedload(Sesiones.acceso),
+        joinedload(Sesiones.filtro)
+    ).get_or_404(id)
+    data = request.get_json()
+
+    paciente_id = data.get('paciente_id')
+    if paciente_id:
+        paciente = Pacientes.query.get(paciente_id)
+        if not paciente:
+            return jsonify({'error': 'Paciente no encontrado'}), 404
+        sesion.paciente_id = paciente_id
+
+    fecha_hora_str = data.get('fecha_hora')
+    if fecha_hora_str:
+        try:
+            sesion.fecha_hora = datetime.fromisoformat(fecha_hora_str)
+        except ValueError:
+            return jsonify({'error': 'Formato de fecha_hora inválido'}), 400
+
+    tipo_de_filtro = data.get('filtro')
+    if tipo_de_filtro is not None:
+        if tipo_de_filtro == '':
+            sesion.filtro_sesion = None
+        else:
+            filtro = Filtros.query.filter_by(estado=tipo_de_filtro).first()
+            if not filtro:
+                return jsonify({'error': f'Filtro "{tipo_de_filtro}" no válido'}), 400
+            sesion.filtro_sesion = filtro.id
+
+    tipo_de_acceso = data.get('acceso')
+    if tipo_de_acceso is not None:
+        if tipo_de_acceso == '':
+            sesion.acceso_sesion = None
+        else:
+            acceso = Accesos.query.filter_by(tipo=tipo_de_acceso).first()
+            if not acceso:
+                return jsonify({'error': f'Acceso "{tipo_de_acceso}" no válido'}), 400
+            sesion.acceso_sesion = acceso.id
+
+    db.session.commit()
+    return jsonify(sesion_to_dict(sesion))
+
+
 @sesion_bp.route('/api/session/<int:id>', methods=['DELETE'])
 def delete_session(id):
     sesion = Sesiones.query.get_or_404(id)

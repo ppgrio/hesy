@@ -21,6 +21,8 @@ def create_doctor():
         return jsonify({'error': 'El nombre es obligatorio'}), 400
     if len(nombre) > 20:
         return jsonify({'error': 'El nombre no puede exceder 20 caracteres'}), 400
+    if Doctores.query.filter_by(nombre=nombre).first():
+        return jsonify({'error': 'Ya existe un doctor con ese nombre'}), 409
     doctor = Doctores(nombre=nombre)
     db.session.add(doctor)
     db.session.commit()
@@ -35,6 +37,9 @@ def update_doctor(id):
         return jsonify({'error': 'El nombre es obligatorio'}), 400
     if len(nombre) > 20:
         return jsonify({'error': 'El nombre no puede exceder 20 caracteres'}), 400
+    existente = Doctores.query.filter_by(nombre=nombre).first()
+    if existente and existente.id != id:
+        return jsonify({'error': 'Ya existe un doctor con ese nombre'}), 409
     doctor.nombre = nombre
     db.session.commit()
     return jsonify({'id': doctor.id, 'nombre': doctor.nombre})

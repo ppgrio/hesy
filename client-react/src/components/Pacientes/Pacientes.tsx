@@ -1,6 +1,29 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect } from 'react'
+import { useMensaje } from '../shared/hooks'
+import MensajeToast from '../shared/MensajeToast'
+import CrudModal from '../shared/CrudModal'
+import CrudTableHead from '../shared/CrudTableHead'
+import useSortFilter from '../shared/useSortFilter'
+import type { ColumnConfig } from '../shared/useSortFilter'
+import PacienteRow from './PacienteRow'
+import '../shared/crud.css'
 
-interface Patient {
+interface Doctor {
+  id: number
+  nombre: string
+}
+
+interface Acceso {
+  id: number
+  tipo: string
+}
+
+interface Filtro {
+  id: number
+  estado: string
+}
+
+interface PacienteItem {
   no_expediente: number
   nombre: string
   fecha_nacimiento: string | null
@@ -9,17 +32,18 @@ interface Patient {
   observaciones: string | null
   fecha_inicio_filtro: string | null
   fecha_fin_filtro: string | null
+  doctor_id: number | null
   doctor: string | null
+  acceso_id: number | null
   acceso: string | null
+  filtro_id: number | null
   filtro: string | null
 }
 
-type SortKey = keyof Patient
-
-const columns: { key: SortKey; label: string }[] = [
+const columns: ColumnConfig<PacienteItem>[] = [
   { key: 'no_expediente', label: 'No. Expediente' },
   { key: 'nombre', label: 'Nombre' },
-  { key: 'fecha_nacimiento', label: 'Fecha Nacimiento' },
+  { key: 'fecha_nacimiento', label: 'Fecha Nac.' },
   { key: 'hierros', label: 'Hierros' },
   { key: 'eritropoyetina', label: 'Eritropoyetina' },
   { key: 'doctor', label: 'Doctor' },
@@ -31,20 +55,51 @@ const columns: { key: SortKey; label: string }[] = [
 ]
 
 function Pacientes() {
-  const [patients, setPatients] = useState<Patient[]>([])
+  const [pacientes, setPacientes] = useState<PacienteItem[]>([])
+  const [doctores, setDoctores] = useState<Doctor[]>([])
+  const [accesos, setAccesos] = useState<Acceso[]>([])
+  const [filtros, setFiltros] = useState<Filtro[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [sortKey, setSortKey] = useState<SortKey>('no_expediente')
-  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc')
+  const { mensaje, mostrarMensaje } = useMensaje(4000)
+  const [modalOpen, setModalOpen] = useState(false)
+
+  const { sortKey, sortDir, filtros: filtrosState, setFiltro, handleSort, sorted } = useSortFilter(
+    pacientes, columns, 'no_expediente', 'desc'
+  )
+
+  const [nuevoExpediente, setNuevoExpediente] = useState('')
+  const [nuevoNombre, setNuevoNombre] = useState('')
+  const [nuevoFechaNacimiento, setNuevoFechaNacimiento] = useState('')
+  const [nuevoHierros, setNuevoHierros] = useState('')
+  const [nuevoEritropoyetina, setNuevoEritropoyetina] = useState('')
+  const [nuevoDoctorId, setNuevoDoctorId] = useState('')
+  const [nuevoAccesoId, setNuevoAccesoId] = useState('')
+  const [nuevoFiltroId, setNuevoFiltroId] = useState('')
+  const [nuevoFechaInicioFiltro, setNuevoFechaInicioFiltro] = useState('')
+  const [nuevoFechaFinFiltro, setNuevoFechaFinFiltro] = useState('')
+  const [nuevoObservaciones, setNuevoObservaciones] = useState('')
 
   useEffect(() => {
-    fetch('/api/patient')
-      .then(res => {
-        if (!res.ok) throw new Error('Error al obtener pacientes')
-        return res.json()
-      })
-      .then(data => {
-        setPatients(data)
+    Promise.all([
+      fetch('/api/patient'),
+      fetch('/api/doctores'),
+      fetch('/api/accesos'),
+      fetch('/api/filtros'),
+    ])
+      .then(async ([resPac, resDoc, resAcc, resFil]) => {
+        if (!resPac.ok) throw new Error('Error al obtener pacientes')
+        if (!resDoc.ok) throw new Error('Error al obtener doctores')
+        if (!resAcc.ok) throw new Error('Error al obtener accesos')
+        if (!resFil.ok) throw new Error('Error al obtener filtros')
+        const pacData = await resPac.json()
+        const docData = await resDoc.json()
+        const accData = await resAcc.json()
+        const filData = await resFil.json()
+        setPacientes(pacData)
+        setDoctores(docData)
+        setAccesos(accData)
+        setFiltros(filData)
         setLoading(false)
       })
       .catch(err => {
@@ -53,73 +108,204 @@ function Pacientes() {
       })
   }, [])
 
-  const sorted = useMemo(() => {
-    return [...patients].sort((a, b) => {
-      const va = a[sortKey]
-      const vb = b[sortKey]
-      if (va == null && vb == null) return 0
-      if (va == null) return 1
-      if (vb == null) return -1
-      if (va < vb) return sortDir === 'asc' ? -1 : 1
-      if (va > vb) return sortDir === 'asc' ? 1 : -1
-      return 0
-    })
-  }, [patients, sortKey, sortDir])
+  function limpiarForm() {
+    setNuevoExpediente('')
+    setNuevoNombre('')
+    setNuevoFechaNacimiento('')
+    setNuevoHierros('')
+    setNuevoEritropoyetina('')
+    setNuevoDoctorId('')
+    setNuevoAccesoId('')
+    setNuevoFiltroId('')
+    setNuevoFechaInicioFiltro('')
+    setNuevoFechaFinFiltro('')
+    setNuevoObservaciones('')
+  }
 
-  function handleSort(key: SortKey) {
-    if (key === sortKey) {
-      setSortDir(d => (d === 'asc' ? 'desc' : 'asc'))
-    } else {
-      setSortKey(key)
-      setSortDir('desc')
+  function handleAdd() {
+    const nombre = nuevoNombre.trim()
+    if (!nombre) {
+      mostrarMensaje('error', 'El nombre es obligatorio')
+      return
     }
+    if (nombre.length > 60) {
+      mostrarMensaje('error', 'El nombre no puede exceder 60 caracteres')
+      return
+    }
+
+    const body: Record<string, unknown> = { nombre }
+    if (nuevoExpediente.trim()) body.no_expediente = parseInt(nuevoExpediente, 10)
+    if (nuevoFechaNacimiento) body.fecha_nacimiento = nuevoFechaNacimiento
+    if (nuevoHierros.trim()) body.hierros = parseInt(nuevoHierros, 10)
+    if (nuevoEritropoyetina.trim()) body.eritropoyetina = parseInt(nuevoEritropoyetina, 10)
+    if (nuevoDoctorId) body.doctor_id = parseInt(nuevoDoctorId, 10)
+    if (nuevoAccesoId) body.acceso_id = parseInt(nuevoAccesoId, 10)
+    if (nuevoFiltroId) body.filtro_id = parseInt(nuevoFiltroId, 10)
+    if (nuevoFechaInicioFiltro) body.fecha_inicio_filtro = nuevoFechaInicioFiltro
+    if (nuevoFechaFinFiltro) body.fecha_fin_filtro = nuevoFechaFinFiltro
+    if (nuevoObservaciones.trim()) body.observaciones = nuevoObservaciones.trim()
+
+    fetch('/api/patient', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    })
+      .then(async res => {
+        if (!res.ok) {
+          const err = await res.json()
+          throw new Error(err.error || 'Error al agregar paciente')
+        }
+        return res.json()
+      })
+      .then(paciente => {
+        setPacientes(prev => [...prev, paciente])
+        limpiarForm()
+        setModalOpen(false)
+        mostrarMensaje('exito', `Paciente "${paciente.nombre}" agregado`)
+      })
+      .catch(err => mostrarMensaje('error', err.message))
+  }
+
+  function handleUpdated(paciente: PacienteItem) {
+    setPacientes(prev => prev.map(p => (p.no_expediente === paciente.no_expediente ? paciente : p)))
+  }
+
+  function handleDeleted(no_expediente: number) {
+    setPacientes(prev => prev.filter(p => p.no_expediente !== no_expediente))
   }
 
   return (
     <section id="patients-page">
-      <h1>Pacientes</h1>
+      <div className="inventario-header">
+        <h1>Pacientes</h1>
+        <button className="btn-agregar" onClick={() => setModalOpen(true)}>+ Agregar Paciente</button>
+      </div>
+
+      <MensajeToast mensaje={mensaje} />
+
+      <CrudModal open={modalOpen} onClose={() => setModalOpen(false)} titulo="Agregar Paciente" ancho>
+        <input
+          type="text"
+          inputMode="numeric"
+          placeholder="No. Expediente"
+          value={nuevoExpediente}
+          onChange={e => setNuevoExpediente(e.target.value)}
+          onKeyDown={e => { if (e.key === 'Enter') handleAdd() }}
+        />
+        <input
+          type="text"
+          placeholder="Nombre"
+          value={nuevoNombre}
+          onChange={e => setNuevoNombre(e.target.value)}
+          onKeyDown={e => { if (e.key === 'Enter') handleAdd() }}
+        />
+        <input
+          type="date"
+          placeholder="Fecha de Nacimiento"
+          value={nuevoFechaNacimiento}
+          onChange={e => setNuevoFechaNacimiento(e.target.value)}
+        />
+        <input
+          type="number"
+          placeholder="Hierros"
+          value={nuevoHierros}
+          onChange={e => setNuevoHierros(e.target.value)}
+          onKeyDown={e => { if (e.key === 'Enter') handleAdd() }}
+        />
+        <input
+          type="number"
+          placeholder="Eritropoyetina"
+          value={nuevoEritropoyetina}
+          onChange={e => setNuevoEritropoyetina(e.target.value)}
+          onKeyDown={e => { if (e.key === 'Enter') handleAdd() }}
+        />
+        <select
+          value={nuevoDoctorId}
+          onChange={e => setNuevoDoctorId(e.target.value)}
+        >
+          <option value="">Sin doctor</option>
+          {doctores.map(d => (
+            <option key={d.id} value={d.id}>{d.nombre}</option>
+          ))}
+        </select>
+        <select
+          value={nuevoAccesoId}
+          onChange={e => setNuevoAccesoId(e.target.value)}
+        >
+          <option value="">Sin acceso</option>
+          {accesos.map(a => (
+            <option key={a.id} value={a.id}>{a.tipo}</option>
+          ))}
+        </select>
+        <select
+          value={nuevoFiltroId}
+          onChange={e => setNuevoFiltroId(e.target.value)}
+        >
+          <option value="">Sin filtro</option>
+          {filtros.map(f => (
+            <option key={f.id} value={f.id}>{f.estado}</option>
+          ))}
+        </select>
+        <input
+          type="date"
+          placeholder="Inicio Filtro"
+          value={nuevoFechaInicioFiltro}
+          onChange={e => setNuevoFechaInicioFiltro(e.target.value)}
+        />
+        <input
+          type="date"
+          placeholder="Fin Filtro"
+          value={nuevoFechaFinFiltro}
+          onChange={e => setNuevoFechaFinFiltro(e.target.value)}
+        />
+        <input
+          type="text"
+          placeholder="Observaciones"
+          value={nuevoObservaciones}
+          onChange={e => setNuevoObservaciones(e.target.value)}
+          onKeyDown={e => { if (e.key === 'Enter') handleAdd() }}
+        />
+        <button onClick={handleAdd}>Agregar</button>
+      </CrudModal>
 
       {loading && <p className="status">Cargando pacientes...</p>}
       {error && <p className="status error">{error}</p>}
-      {!loading && !error && patients.length === 0 && (
+      {!loading && !error && pacientes.length === 0 && (
         <p className="status">No hay pacientes registrados.</p>
       )}
 
-      {!loading && !error && patients.length > 0 && (
+      {!loading && !error && pacientes.length > 0 && (
         <div className="table-wrapper">
           <table>
-            <thead>
-              <tr>
-                {columns.map(col => (
-                  <th
-                    key={col.key}
-                    className="sortable"
-                    onClick={() => handleSort(col.key)}
-                  >
-                    {col.label}
-                    {sortKey === col.key && (
-                      <span className="sort-arrow">{sortDir === 'desc' ? ' ▼' : ' ▲'}</span>
-                    )}
-                  </th>
-                ))}
-              </tr>
-            </thead>
+            <CrudTableHead
+              columns={columns}
+              filtros={filtrosState}
+              onFiltroChange={setFiltro}
+              sortKey={sortKey}
+              sortDir={sortDir}
+              onSort={handleSort}
+            />
             <tbody>
-              {sorted.map(p => (
-                <tr key={p.no_expediente}>
-                  <td>{p.no_expediente}</td>
-                  <td>{p.nombre}</td>
-                  <td>{p.fecha_nacimiento ?? '—'}</td>
-                  <td>{p.hierros ?? '—'}</td>
-                  <td>{p.eritropoyetina ?? '—'}</td>
-                  <td>{p.doctor ?? '—'}</td>
-                  <td>{p.acceso ?? '—'}</td>
-                  <td>{p.filtro ?? '—'}</td>
-                  <td>{p.fecha_inicio_filtro ?? '—'}</td>
-                  <td>{p.fecha_fin_filtro ?? '—'}</td>
-                  <td>{p.observaciones ?? '—'}</td>
+              {sorted.length === 0 ? (
+                <tr>
+                  <td colSpan={columns.length + 1} style={{ textAlign: 'center', padding: '24px 0' }}>
+                    Sin resultados.
+                  </td>
                 </tr>
-              ))}
+              ) : (
+                sorted.map(p => (
+                  <PacienteRow
+                    key={p.no_expediente}
+                    paciente={p}
+                    doctores={doctores}
+                    accesos={accesos}
+                    filtros={filtros}
+                    onUpdated={handleUpdated}
+                    onDeleted={handleDeleted}
+                    mostrarMensaje={mostrarMensaje}
+                  />
+                ))
+              )}
             </tbody>
           </table>
         </div>
@@ -127,5 +313,4 @@ function Pacientes() {
     </section>
   )
 }
-
 export default Pacientes

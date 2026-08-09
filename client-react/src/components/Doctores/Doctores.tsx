@@ -1,16 +1,19 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect } from 'react'
 import { useMensaje } from '../shared/hooks'
 import MensajeToast from '../shared/MensajeToast'
+import CrudModal from '../shared/CrudModal'
+import CrudTableHead from '../shared/CrudTableHead'
+import useSortFilter from '../shared/useSortFilter'
+import type { ColumnConfig } from '../shared/useSortFilter'
 import DoctorRow from './DoctorRow'
+import '../shared/crud.css'
 
 interface Doctor {
   id: number
   nombre: string
 }
 
-type SortKey = keyof Doctor
-
-const columns: { key: SortKey; label: string }[] = [
+const columns: ColumnConfig<Doctor>[] = [
   { key: 'id', label: 'ID' },
   { key: 'nombre', label: 'Nombre' },
 ]
@@ -19,10 +22,13 @@ function Doctores() {
   const [doctors, setDoctors] = useState<Doctor[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [sortKey, setSortKey] = useState<SortKey>('id')
-  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc')
   const [nuevoNombre, setNuevoNombre] = useState('')
   const { mensaje, mostrarMensaje } = useMensaje(4000)
+  const [modalOpen, setModalOpen] = useState(false)
+
+  const { sortKey, sortDir, filtros, setFiltro, handleSort, sorted } = useSortFilter(
+    doctors, columns, 'id', 'asc'
+  )
 
   useEffect(() => {
     fetch('/api/doctor')
@@ -40,31 +46,12 @@ function Doctores() {
       })
   }, [])
 
-  const sorted = useMemo(() => {
-    return [...doctors].sort((a, b) => {
-      const va = a[sortKey]
-      const vb = b[sortKey]
-      if (va == null && vb == null) return 0
-      if (va == null) return 1
-      if (vb == null) return -1
-      if (va < vb) return sortDir === 'asc' ? -1 : 1
-      if (va > vb) return sortDir === 'asc' ? 1 : -1
-      return 0
-    })
-  }, [doctors, sortKey, sortDir])
-
-  function handleSort(key: SortKey) {
-    if (key === sortKey) {
-      setSortDir(d => (d === 'asc' ? 'desc' : 'asc'))
-    } else {
-      setSortKey(key)
-      setSortDir('asc')
-    }
-  }
-
   function handleAdd() {
     const nombre = nuevoNombre.trim()
-    if (!nombre) return
+    if (!nombre) {
+      mostrarMensaje('error', 'El nombre es obligatorio')
+      return
+    }
     if (nombre.length > 20) {
       mostrarMensaje('error', 'El nombre no puede exceder 20 caracteres')
       return
@@ -84,6 +71,7 @@ function Doctores() {
       .then(doctor => {
         setDoctors(prev => [...prev, doctor])
         setNuevoNombre('')
+        setModalOpen(false)
         mostrarMensaje('exito', `Doctor "${doctor.nombre}" agregado`)
       })
       .catch(err => mostrarMensaje('error', err.message))
@@ -99,11 +87,14 @@ function Doctores() {
 
   return (
     <section id="patients-page">
-      <h1>Doctores</h1>
+      <div className="inventario-header">
+        <h1>Doctores</h1>
+        <button className="btn-agregar" onClick={() => setModalOpen(true)}>+ Agregar Doctor</button>
+      </div>
 
       <MensajeToast mensaje={mensaje} />
 
-      <div className="filtro-fechas">
+      <CrudModal open={modalOpen} onClose={() => setModalOpen(false)} titulo="Agregar Doctor">
         <input
           type="text"
           placeholder="Nombre del doctor"
@@ -111,10 +102,8 @@ function Doctores() {
           onChange={e => setNuevoNombre(e.target.value)}
           onKeyDown={e => { if (e.key === 'Enter') handleAdd() }}
         />
-        <button onClick={handleAdd}>
-          Agregar doctor
-        </button>
-      </div>
+        <button onClick={handleAdd}>Agregar</button>
+      </CrudModal>
 
       {loading && <p className="status">Cargando doctores...</p>}
       {error && <p className="status error">{error}</p>}
@@ -125,33 +114,32 @@ function Doctores() {
       {!loading && !error && doctors.length > 0 && (
         <div className="table-wrapper">
           <table>
-            <thead>
-              <tr>
-                {columns.map(col => (
-                  <th
-                    key={col.key}
-                    className="sortable"
-                    onClick={() => handleSort(col.key)}
-                  >
-                    {col.label}
-                    {sortKey === col.key && (
-                      <span className="sort-arrow">{sortDir === 'desc' ? ' ▼' : ' ▲'}</span>
-                    )}
-                  </th>
-                ))}
-                <th>Acciones</th>
-              </tr>
-            </thead>
+            <CrudTableHead
+              columns={columns}
+              filtros={filtros}
+              onFiltroChange={setFiltro}
+              sortKey={sortKey}
+              sortDir={sortDir}
+              onSort={handleSort}
+            />
             <tbody>
-              {sorted.map(d => (
-                <DoctorRow
-                  key={d.id}
-                  doctor={d}
-                  onUpdated={handleUpdated}
-                  onDeleted={handleDeleted}
-                  mostrarMensaje={mostrarMensaje}
-                />
-              ))}
+              {sorted.length === 0 ? (
+                <tr>
+                  <td colSpan={columns.length + 1} style={{ textAlign: 'center', padding: '24px 0' }}>
+                    Sin resultados.
+                  </td>
+                </tr>
+              ) : (
+                sorted.map(d => (
+                  <DoctorRow
+                    key={d.id}
+                    doctor={d}
+                    onUpdated={handleUpdated}
+                    onDeleted={handleDeleted}
+                    mostrarMensaje={mostrarMensaje}
+                  />
+                ))
+              )}
             </tbody>
           </table>
         </div>

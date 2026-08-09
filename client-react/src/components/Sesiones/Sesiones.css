@@ -1,3 +1,7 @@
+.inventario-header {
+  margin-bottom: 16px;
+}
+
 .semana-nav {
   display: flex;
   align-items: center;

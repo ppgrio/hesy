@@ -1,8 +1,12 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect } from 'react'
 import { useMensaje } from '../shared/hooks'
 import MensajeToast from '../shared/MensajeToast'
+import CrudModal from '../shared/CrudModal'
+import CrudTableHead from '../shared/CrudTableHead'
+import useSortFilter from '../shared/useSortFilter'
+import type { ColumnConfig } from '../shared/useSortFilter'
 import InventarioRow from './InventarioRow'
-import './Inventario.css'
+import '../shared/crud.css'
 
 interface Area {
   id: number
@@ -19,11 +23,7 @@ interface InventarioItem {
   area: string | null
 }
 
-type SortKey = keyof InventarioItem
-
-type Filtros = { [K in SortKey]: string }
-
-const columns: { key: SortKey; label: string }[] = [
+const columns: ColumnConfig<InventarioItem>[] = [
   { key: 'codigo', label: 'Código' },
   { key: 'nombre', label: 'Nombre' },
   { key: 'cantidad', label: 'Cantidad' },
@@ -31,26 +31,22 @@ const columns: { key: SortKey; label: string }[] = [
   { key: 'area', label: 'Área' },
 ]
 
-function matchFilter(value: unknown, q: string): boolean {
-  if (value == null) return q === ''
-  return String(value).toLowerCase().includes(q)
-}
-
 function Inventario() {
   const [items, setItems] = useState<InventarioItem[]>([])
   const [areas, setAreas] = useState<Area[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [sortKey, setSortKey] = useState<SortKey>('codigo')
-  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc')
   const [nuevoCodigo, setNuevoCodigo] = useState('')
   const [nuevoNombre, setNuevoNombre] = useState('')
   const [nuevaCantidad, setNuevaCantidad] = useState('')
   const [nuevaCaducidad, setNuevaCaducidad] = useState('')
   const [nuevaAreaId, setNuevaAreaId] = useState('')
-  const [filtros, setFiltros] = useState<Filtros>({ id: '', codigo: '', nombre: '', cantidad: '', caducidad: '', area_id:'', area: '' })
   const { mensaje, mostrarMensaje } = useMensaje(4000)
   const [modalOpen, setModalOpen] = useState(false)
+
+  const { sortKey, sortDir, filtros, setFiltro, handleSort, sorted } = useSortFilter(
+    items, columns, 'codigo', 'asc'
+  )
 
   useEffect(() => {
     Promise.all([
@@ -72,36 +68,12 @@ function Inventario() {
       })
   }, [])
 
-  const filtered = useMemo(() => {
-    return items.filter(item => {
-      for (const col of columns) {
-        const q = filtros[col.key].toLowerCase().trim()
-        if (q && !matchFilter(item[col.key], q)) return false
-      }
-      return true
-    })
-  }, [items, filtros])
-
-  const sorted = useMemo(() => {
-    return [...filtered].sort((a, b) => {
-      const va = a[sortKey]
-      const vb = b[sortKey]
-      if (va == null && vb == null) return 0
-      if (va == null) return 1
-      if (vb == null) return -1
-      if (va < vb) return sortDir === 'asc' ? -1 : 1
-      if (va > vb) return sortDir === 'asc' ? 1 : -1
-      return 0
-    })
-  }, [filtered, sortKey, sortDir])
-
-  function handleSort(key: SortKey) {
-    if (key === sortKey) {
-      setSortDir(d => (d === 'asc' ? 'desc' : 'asc'))
-    } else {
-      setSortKey(key)
-      setSortDir('asc')
-    }
+  function limpiarForm() {
+    setNuevoCodigo('')
+    setNuevoNombre('')
+    setNuevaCantidad('')
+    setNuevaCaducidad('')
+    setNuevaAreaId('')
   }
 
   function handleAdd() {
@@ -143,11 +115,7 @@ function Inventario() {
       })
       .then(item => {
         setItems(prev => [...prev, item])
-        setNuevoCodigo('')
-        setNuevoNombre('')
-        setNuevaCantidad('')
-        setNuevaCaducidad('')
-        setNuevaAreaId('')
+        limpiarForm()
         setModalOpen(false)
         mostrarMensaje('exito', `Item "${item.nombre}" agregado`)
       })
@@ -171,56 +139,46 @@ function Inventario() {
 
       <MensajeToast mensaje={mensaje} />
 
-      {modalOpen && (
-        <div className="modal-overlay" onClick={() => setModalOpen(false)}>
-          <div className="modal-contenido" onClick={e => e.stopPropagation()}>
-            <div className="modal-header">
-              <h2>Agregar Item</h2>
-              <button className="modal-cerrar" onClick={() => setModalOpen(false)}>×</button>
-            </div>
-            <div className="modal-cuerpo">
-              <input
-                type="text"
-                inputMode="numeric"
-                placeholder="Código"
-                value={nuevoCodigo}
-                onChange={e => setNuevoCodigo(e.target.value)}
-                onKeyDown={e => { if (e.key === 'Enter') handleAdd() }}
-              />
-              <input
-                type="text"
-                placeholder="Nombre"
-                value={nuevoNombre}
-                onChange={e => setNuevoNombre(e.target.value)}
-                onKeyDown={e => { if (e.key === 'Enter') handleAdd() }}
-              />
-              <input
-                type="number"
-                placeholder="Cantidad"
-                value={nuevaCantidad}
-                onChange={e => setNuevaCantidad(e.target.value)}
-                onKeyDown={e => { if (e.key === 'Enter') handleAdd() }}
-                min="0"
-              />
-              <input
-                type="date"
-                value={nuevaCaducidad}
-                onChange={e => setNuevaCaducidad(e.target.value)}
-              />
-              <select
-                value={nuevaAreaId}
-                onChange={e => setNuevaAreaId(e.target.value)}
-              >
-                <option value="">Sin área</option>
-                {areas.map(a => (
-                  <option key={a.id} value={a.id}>{a.nombre}</option>
-                ))}
-              </select>
-              <button onClick={handleAdd}>Agregar</button>
-            </div>
-          </div>
-        </div>
-      )}
+      <CrudModal open={modalOpen} onClose={() => setModalOpen(false)} titulo="Agregar Item">
+        <input
+          type="text"
+          inputMode="numeric"
+          placeholder="Código"
+          value={nuevoCodigo}
+          onChange={e => setNuevoCodigo(e.target.value)}
+          onKeyDown={e => { if (e.key === 'Enter') handleAdd() }}
+        />
+        <input
+          type="text"
+          placeholder="Nombre"
+          value={nuevoNombre}
+          onChange={e => setNuevoNombre(e.target.value)}
+          onKeyDown={e => { if (e.key === 'Enter') handleAdd() }}
+        />
+        <input
+          type="number"
+          placeholder="Cantidad"
+          value={nuevaCantidad}
+          onChange={e => setNuevaCantidad(e.target.value)}
+          onKeyDown={e => { if (e.key === 'Enter') handleAdd() }}
+          min="0"
+        />
+        <input
+          type="date"
+          value={nuevaCaducidad}
+          onChange={e => setNuevaCaducidad(e.target.value)}
+        />
+        <select
+          value={nuevaAreaId}
+          onChange={e => setNuevaAreaId(e.target.value)}
+        >
+          <option value="">Sin área</option>
+          {areas.map(a => (
+            <option key={a.id} value={a.id}>{a.nombre}</option>
+          ))}
+        </select>
+        <button onClick={handleAdd}>Agregar</button>
+      </CrudModal>
 
       {loading && <p className="status">Cargando inventario...</p>}
       {error && <p className="status error">{error}</p>}
@@ -231,39 +189,16 @@ function Inventario() {
       {!loading && !error && items.length > 0 && (
         <div className="table-wrapper">
           <table>
-            <thead>
-              <tr>
-                {columns.map(col => (
-                  <th key={`f-${col.key}`}>
-                    <input
-                      type="text"
-                      className="filtro-input"
-                      placeholder={col.label}
-                      value={filtros[col.key]}
-                      onChange={e => setFiltros(prev => ({ ...prev, [col.key]: e.target.value }))}
-                    />
-                  </th>
-                ))}
-                <th></th>
-              </tr>
-              <tr>
-                {columns.map(col => (
-                  <th
-                    key={col.key}
-                    className="sortable"
-                    onClick={() => handleSort(col.key)}
-                  >
-                    {col.label}
-                    {sortKey === col.key && (
-                      <span className="sort-arrow">{sortDir === 'desc' ? ' ▼' : ' ▲'}</span>
-                    )}
-                  </th>
-                ))}
-                <th>Acciones</th>
-              </tr>
-            </thead>
+            <CrudTableHead
+              columns={columns}
+              filtros={filtros}
+              onFiltroChange={setFiltro}
+              sortKey={sortKey}
+              sortDir={sortDir}
+              onSort={handleSort}
+            />
             <tbody>
-              {filtered.length === 0 ? (
+              {sorted.length === 0 ? (
                 <tr>
                   <td colSpan={columns.length + 1} style={{ textAlign: 'center', padding: '24px 0' }}>
                     Sin resultados.
