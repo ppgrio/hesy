@@ -14,6 +14,7 @@ class Pacientes(db.Model):
     filtro_id = db.Column(db.Integer, db.ForeignKey('filtros.id'))
     fecha_inicio_filtro = db.Column(db.Date)
     fecha_fin_filtro = db.Column(db.Date)
+    usos_restantes = db.Column(db.Integer)
 
     #relaciones
     doctor = db.relationship('Doctores', backref = 'pacientes')

@@ -1,4 +1,4 @@
-import { getMonday, formatFechaCompleta, normalizar } from '../shared/utils'
+import { getMonday, formatFechaCompleta } from '../shared/utils'
 
 const DAYS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom']
 
@@ -32,4 +32,4 @@ function formatISOtoDatetime(dia: Date, hora: string): string {
   return `${y}-${m}-${d}T${hora}:00`
 }
 
-export { DAYS, HORAS, getMonday, formatFechaCompleta, normalizar, toSlotKey, roundToSlot, formatFecha, formatISOtoDatetime }
+export { DAYS, HORAS, getMonday, formatFechaCompleta, toSlotKey, roundToSlot, formatFecha, formatISOtoDatetime }

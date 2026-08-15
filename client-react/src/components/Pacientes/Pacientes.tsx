@@ -83,7 +83,7 @@ function Pacientes() {
   useEffect(() => {
     Promise.all([
       fetch('/api/patient'),
-      fetch('/api/doctores'),
+      fetch('/api/doctor'),
       fetch('/api/accesos'),
       fetch('/api/filtros'),
     ])

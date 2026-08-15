@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react'
 import type { Session, Patient, SlotBusqueda, InventarioItem, MedicamentoUso, FiltroOption, AccesoOption } from './types'
-import { getMonday, formatFechaCompleta, normalizar, roundToSlot, toSlotKey, formatISOtoDatetime } from './utils'
+import { getMonday, formatFechaCompleta, roundToSlot, toSlotKey, formatISOtoDatetime } from './utils'
 import { useMensaje } from '../shared/hooks'
 import MensajeToast from '../shared/MensajeToast'
 import CalendarioGrid from './CalendarioGrid'

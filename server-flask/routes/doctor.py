@@ -7,7 +7,7 @@ doctor_bp = Blueprint('doctor', __name__)
 
 @doctor_bp.route('/api/doctor')
 def get_doctors():
-    doctores = Doctores.query.all()
+    doctores = Doctores.query.order_by(Doctores.nombre).all()
     return jsonify([{
         'id': d.id,
         'nombre': d.nombre,

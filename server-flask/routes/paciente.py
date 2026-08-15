@@ -218,9 +218,3 @@ def delete_patient(no_expediente):
     db.session.delete(paciente)
     db.session.commit()
     return jsonify({'success': True})
-
-
-@paciente_bp.route('/api/doctores', methods=['GET'])
-def get_doctores():
-    doctores = Doctores.query.order_by(Doctores.nombre).all()
-    return jsonify([{'id': d.id, 'nombre': d.nombre} for d in doctores])

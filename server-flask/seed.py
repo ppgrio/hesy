@@ -119,7 +119,7 @@ def seed():
 
         print('Sembrando 1000 pacientes...')
         for i in range(1000):
-            nombre = f'{random.choice(nombres)} {random.choice(apellidos)}'
+            nombre = f'{random.choice(nombres)} {random.choice(nombres)} {random.choice(apellidos)} {random.choice(apellidos)}'
             fecha_nac = date(
                 random.randint(1940, 2010),
                 random.randint(1, 12),

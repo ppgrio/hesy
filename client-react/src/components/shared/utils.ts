@@ -17,7 +17,7 @@ function normalizar(texto: string): string {
 
 function matchFilter(value: unknown, q: string): boolean {
   if (value == null) return q === ''
-  return String(value).toLowerCase().includes(q)
+  return normalizar(String(value)).includes(normalizar(q))
 }
 
 export { getMonday, formatFechaCompleta, normalizar, matchFilter }
