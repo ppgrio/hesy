@@ -21,6 +21,7 @@ interface PacienteItem {
   fecha_nacimiento: string | null
   hierros: number | null
   eritropoyetina: number | null
+  usos_restantes: number | null
   observaciones: string | null
   fecha_inicio_filtro: string | null
   fecha_fin_filtro: string | null
@@ -48,6 +49,7 @@ function PacienteRow({ paciente, doctores, accesos, filtros, onUpdated, onDelete
   const [editFechaNacimiento, setEditFechaNacimiento] = useState('')
   const [editHierros, setEditHierros] = useState('')
   const [editEritropoyetina, setEditEritropoyetina] = useState('')
+  const [editUsosRestantes, setEditUsosRestantes] = useState('')
   const [editDoctorId, setEditDoctorId] = useState('')
   const [editAccesoId, setEditAccesoId] = useState('')
   const [editFiltroId, setEditFiltroId] = useState('')
@@ -61,6 +63,7 @@ function PacienteRow({ paciente, doctores, accesos, filtros, onUpdated, onDelete
     setEditFechaNacimiento(paciente.fecha_nacimiento ?? '')
     setEditHierros(paciente.hierros != null ? String(paciente.hierros) : '')
     setEditEritropoyetina(paciente.eritropoyetina != null ? String(paciente.eritropoyetina) : '')
+    setEditUsosRestantes(paciente.usos_restantes != null ? String(paciente.usos_restantes) : '')
     setEditDoctorId(paciente.doctor_id ? String(paciente.doctor_id) : '')
     setEditAccesoId(paciente.acceso_id ? String(paciente.acceso_id) : '')
     setEditFiltroId(paciente.filtro_id ? String(paciente.filtro_id) : '')
@@ -91,6 +94,8 @@ function PacienteRow({ paciente, doctores, accesos, filtros, onUpdated, onDelete
     else body.hierros = null
     if (editEritropoyetina.trim()) body.eritropoyetina = parseInt(editEritropoyetina, 10)
     else body.eritropoyetina = null
+    if (editUsosRestantes.trim()) body.usos_restantes = parseInt(editUsosRestantes, 10)
+    else body.usos_restantes = null
     if (editDoctorId) body.doctor_id = parseInt(editDoctorId, 10)
     else body.doctor_id = null
     if (editAccesoId) body.acceso_id = parseInt(editAccesoId, 10)
@@ -191,6 +196,16 @@ function PacienteRow({ paciente, doctores, accesos, filtros, onUpdated, onDelete
             />
           </td>
           <td>
+            <input
+              type="number"
+              value={editUsosRestantes}
+              onChange={e => setEditUsosRestantes(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter') guardarEdicion(); if (e.key === 'Escape') cancelarEdicion() }}
+              min="0"
+              className="input-editar"
+            />
+          </td>
+          <td>
             <select
               value={editDoctorId}
               onChange={e => setEditDoctorId(e.target.value)}
@@ -258,6 +273,7 @@ function PacienteRow({ paciente, doctores, accesos, filtros, onUpdated, onDelete
           <td>{formatDate(paciente.fecha_nacimiento)}</td>
           <td>{paciente.hierros ?? '—'}</td>
           <td>{paciente.eritropoyetina ?? '—'}</td>
+          <td>{paciente.usos_restantes ?? '—'}</td>
           <td>{paciente.doctor ?? '—'}</td>
           <td>{paciente.acceso ?? '—'}</td>
           <td>{paciente.filtro ?? '—'}</td>

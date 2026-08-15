@@ -29,6 +29,7 @@ interface PacienteItem {
   fecha_nacimiento: string | null
   hierros: number | null
   eritropoyetina: number | null
+  usos_restantes: number | null
   observaciones: string | null
   fecha_inicio_filtro: string | null
   fecha_fin_filtro: string | null
@@ -46,6 +47,7 @@ const columns: ColumnConfig<PacienteItem>[] = [
   { key: 'fecha_nacimiento', label: 'Fecha Nac.' },
   { key: 'hierros', label: 'Hierros' },
   { key: 'eritropoyetina', label: 'Eritropoyetina' },
+  { key: 'usos_restantes', label: 'Usos Rest.' },
   { key: 'doctor', label: 'Doctor' },
   { key: 'acceso', label: 'Acceso' },
   { key: 'filtro', label: 'Filtro' },
@@ -73,6 +75,7 @@ function Pacientes() {
   const [nuevoFechaNacimiento, setNuevoFechaNacimiento] = useState('')
   const [nuevoHierros, setNuevoHierros] = useState('')
   const [nuevoEritropoyetina, setNuevoEritropoyetina] = useState('')
+  const [nuevoUsosRestantes, setNuevoUsosRestantes] = useState('')
   const [nuevoDoctorId, setNuevoDoctorId] = useState('')
   const [nuevoAccesoId, setNuevoAccesoId] = useState('')
   const [nuevoFiltroId, setNuevoFiltroId] = useState('')
@@ -114,6 +117,7 @@ function Pacientes() {
     setNuevoFechaNacimiento('')
     setNuevoHierros('')
     setNuevoEritropoyetina('')
+    setNuevoUsosRestantes('')
     setNuevoDoctorId('')
     setNuevoAccesoId('')
     setNuevoFiltroId('')
@@ -138,6 +142,7 @@ function Pacientes() {
     if (nuevoFechaNacimiento) body.fecha_nacimiento = nuevoFechaNacimiento
     if (nuevoHierros.trim()) body.hierros = parseInt(nuevoHierros, 10)
     if (nuevoEritropoyetina.trim()) body.eritropoyetina = parseInt(nuevoEritropoyetina, 10)
+    if (nuevoUsosRestantes.trim()) body.usos_restantes = parseInt(nuevoUsosRestantes, 10)
     if (nuevoDoctorId) body.doctor_id = parseInt(nuevoDoctorId, 10)
     if (nuevoAccesoId) body.acceso_id = parseInt(nuevoAccesoId, 10)
     if (nuevoFiltroId) body.filtro_id = parseInt(nuevoFiltroId, 10)
@@ -218,6 +223,14 @@ function Pacientes() {
           value={nuevoEritropoyetina}
           onChange={e => setNuevoEritropoyetina(e.target.value)}
           onKeyDown={e => { if (e.key === 'Enter') handleAdd() }}
+        />
+        <input
+          type="number"
+          placeholder="Usos restantes"
+          value={nuevoUsosRestantes}
+          onChange={e => setNuevoUsosRestantes(e.target.value)}
+          onKeyDown={e => { if (e.key === 'Enter') handleAdd() }}
+          min="0"
         />
         <select
           value={nuevoDoctorId}

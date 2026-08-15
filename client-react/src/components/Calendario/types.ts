@@ -12,6 +12,7 @@ interface Patient {
   nombre: string
   acceso: string | null
   filtro: string | null
+  usos_restantes: number | null
 }
 
 interface InventarioItem {

@@ -17,6 +17,7 @@ def paciente_to_dict(p):
         'fecha_nacimiento': p.fecha_nacimiento.isoformat() if p.fecha_nacimiento else None,
         'hierros': p.hierros,
         'eritropoyetina': p.eritropoyetina,
+        'usos_restantes': p.usos_restantes,
         'observaciones': p.observaciones,
         'fecha_inicio_filtro': p.fecha_inicio_filtro.isoformat() if p.fecha_inicio_filtro else None,
         'fecha_fin_filtro': p.fecha_fin_filtro.isoformat() if p.fecha_fin_filtro else None,
@@ -71,6 +72,15 @@ def create_patient():
         except (TypeError, ValueError):
             return jsonify({'error': 'Eritropoyetina debe ser un número entero'}), 400
 
+    usos_restantes = data.get('usos_restantes')
+    if usos_restantes is not None:
+        try:
+            usos_restantes = int(usos_restantes)
+        except (TypeError, ValueError):
+            return jsonify({'error': 'Usos restantes debe ser un número entero'}), 400
+        if usos_restantes < 0:
+            return jsonify({'error': 'Usos restantes no puede ser negativo'}), 400
+
     doctor_id = data.get('doctor_id')
     if doctor_id and not Doctores.query.get(doctor_id):
         return jsonify({'error': 'El doctor seleccionado no existe'}), 400
@@ -114,6 +124,7 @@ def create_patient():
         fecha_nacimiento=fecha_nacimiento,
         hierros=hierros,
         eritropoyetina=eritropoyetina,
+        usos_restantes=usos_restantes,
         doctor_id=doctor_id,
         acceso_id=acceso_id,
         filtro_id=filtro_id,
@@ -162,6 +173,15 @@ def update_patient(no_expediente):
         except (TypeError, ValueError):
             return jsonify({'error': 'Eritropoyetina debe ser un número entero'}), 400
 
+    usos_restantes = data.get('usos_restantes')
+    if usos_restantes is not None:
+        try:
+            usos_restantes = int(usos_restantes)
+        except (TypeError, ValueError):
+            return jsonify({'error': 'Usos restantes debe ser un número entero'}), 400
+        if usos_restantes < 0:
+            return jsonify({'error': 'Usos restantes no puede ser negativo'}), 400
+
     doctor_id = data.get('doctor_id')
     if doctor_id and not Doctores.query.get(doctor_id):
         return jsonify({'error': 'El doctor seleccionado no existe'}), 400
@@ -198,6 +218,7 @@ def update_patient(no_expediente):
     paciente.fecha_nacimiento = fecha_nacimiento
     paciente.hierros = hierros
     paciente.eritropoyetina = eritropoyetina
+    paciente.usos_restantes = usos_restantes
     paciente.doctor_id = doctor_id
     paciente.acceso_id = acceso_id
     paciente.filtro_id = filtro_id

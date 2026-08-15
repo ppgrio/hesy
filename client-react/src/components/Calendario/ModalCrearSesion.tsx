@@ -40,7 +40,9 @@ function ModalCrearSesion({
       >
         <option value="">Seleccionar paciente</option>
         {pacientes.map(p => (
-          <option key={p.no_expediente} value={p.no_expediente}>{p.nombre}</option>
+          <option key={p.no_expediente} value={p.no_expediente}>
+            {p.nombre} ({p.usos_restantes != null ? p.usos_restantes : '—'} usos)
+          </option>
         ))}
       </select>
       <select

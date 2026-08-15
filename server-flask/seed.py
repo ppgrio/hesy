@@ -46,32 +46,20 @@ filtros_estados = ['Nuevo', 'Reuso', 'Desechable']
 
 areas_nombres = ['Bodega', 'Carrito rojo', 'Administracion']
 
-inventario_items = [
-    (1001, 'Heparina', 5000, 120),
-    (1002, 'Suero Fisiológico 500ml', 10000, 90),
-    (1003, 'Suero Fisiológico 1000ml', 8000, 90),
-    (1004, 'Agua Estéril 500ml', 6000, 180),
-    (1005, 'Bicarbonato 100ml', 3000, 60),
-    (1006, 'Dializador FX80', 200, 730),
-    (1007, 'Dializador FX100', 150, 730),
-    (1008, 'Línea Arterial', 500, 730),
-    (1009, 'Línea Venosa', 500, 730),
-    (1010, 'Fístula Aguja 15G', 1000, 365),
-    (1011, 'Fístula Aguja 16G', 1000, 365),
-    (1012, 'Jeringa 5ml', 2000, 730),
-    (1013, 'Jeringa 10ml', 1500, 730),
-    (1014, 'Gasas Estériles 10x10', 5000, 365),
-    (1015, 'Guantes Estériles #7', 800, 730),
-    (1016, 'Guantes Estériles #7.5', 800, 730),
-    (1017, 'Guantes Estériles #8', 600, 730),
-    (1018, 'Cloruro Sódico 20% 10ml', 2000, 90),
-    (1019, 'Gluconato de Calcio 10ml', 1000, 60),
-    (1020, 'Parche Hemostático', 500, 365),
-    (1021, 'Cinta Adhesiva', 300, 730),
-    (1022, 'Apósito Transparente', 1000, 730),
-    (1023, 'Clorhexidina 500ml', 400, 180),
-    (1024, 'Povidona Yodada 500ml', 400, 180),
+inventario_nombres_base = [
+    'Heparina', 'Suero Fisiológico', 'Suero Fisiológico', 'Agua Estéril',
+    'Bicarbonato', 'Dializador', 'Línea Arterial', 'Línea Venosa',
+    'Fístula Aguja', 'Jeringa', 'Gasas Estériles', 'Guantes Estériles',
+    'Cloruro Sódico', 'Gluconato de Calcio', 'Parche Hemostático',
+    'Cinta Adhesiva', 'Apósito Transparente', 'Clorhexidina',
+    'Povidona Yodada', 'Metoclopramida', 'Omeprazol', 'Ranitidina',
+    'Insulina', 'Paracetamol', 'Ibuprofeno', 'Amoxicilina', 'Ceftriaxona',
+    'Vancomicina', 'Furosemida', 'Dexametasona', 'Prednisona', 'Losartán',
+    'Enalapril', 'Amlodipina', 'Metformina', 'Simvastatina', 'Warfarina',
+    'Clopidogrel', 'Levotiroxina', 'Vitamina B12', 'Hierro Sacarosa',
 ]
+
+inventario_presentaciones = ['500ml', '1000ml', '100ml', '10ml', '5ml', '20%', '40mg', '25mg', '500mg', '#7', '#7.5', '#8', '15G', '16G']
 
 def seed():
     with app.app_context():
@@ -105,17 +93,21 @@ def seed():
         db.session.commit()
         areas = Areas.query.all()
 
-        print('Sembrando inventario...')
-        for codigo, nombre, cantidad, caducidad_dias in inventario_items:
+        print('Sembrando 100000 medicamentos...')
+        for i in range(100000):
+            nombre = f'{random.choice(inventario_nombres_base)} {random.choice(inventario_presentaciones)}'
             db.session.add(Inventario(
-                codigo=codigo,
+                codigo=5000000 + i,
                 nombre=nombre,
-                cantidad=cantidad,
+                cantidad=random.randint(10, 20000),
                 caducidad=date(2026, 7, 1) + timedelta(days=random.randint(0, 180)),
                 area_id=random.choice(areas).id,
             ))
+            if (i + 1) % 2000 == 0:
+                db.session.commit()
+                print(f'  {i + 1} medicamentos...')
         db.session.commit()
-        print(f'  {len(inventario_items)} items en inventario listos.')
+        print('  100000 medicamentos listos.')
 
         print('Sembrando 1000 pacientes...')
         for i in range(1000):
@@ -131,6 +123,7 @@ def seed():
                 fecha_nacimiento=fecha_nac,
                 hierros=random.choice([random.randint(1, 6)]),
                 eritropoyetina=random.choice([random.randint(1, 8)]),
+                usos_restantes=random.choice([random.randint(1, 30)]),
                 acceso_id=random.choice(accesos).id,
                 doctor_id=random.choice(doctores).id,
                 observaciones=random.choice([None, 'FAV']),
