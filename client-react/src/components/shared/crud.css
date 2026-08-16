@@ -2,6 +2,17 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 12px;
+}
+
+.inventario-nav {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.inventario-nav .paginacion {
+  padding: 0;
 }
 
 .btn-agregar {
@@ -128,4 +139,32 @@
 
 .filtro-input:focus {
   color: var(--text-h);
+}
+
+.paginacion {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 14px 0;
+}
+
+.btn-pagina {
+  padding: 6px 14px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--text-h);
+  font: 14px var(--sans);
+  cursor: pointer;
+}
+
+.btn-pagina:hover:not(:disabled) {
+  background: var(--accent);
+  color: #fff;
+}
+
+.btn-pagina:disabled {
+  opacity: 0.5;
+  cursor: default;
 }

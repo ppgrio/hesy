@@ -5,6 +5,7 @@ import CrudModal from '../shared/CrudModal'
 import CrudTableHead from '../shared/CrudTableHead'
 import useSortFilter from '../shared/useSortFilter'
 import type { ColumnConfig } from '../shared/useSortFilter'
+import Paginacion from '../shared/Paginacion'
 import InventarioRow from './InventarioRow'
 import '../shared/crud.css'
 
@@ -36,6 +37,8 @@ function Inventario() {
   const [areas, setAreas] = useState<Area[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [page, setPage] = useState(1)
+  const [totalPages, setTotalPages] = useState(1)
   const [nuevoCodigo, setNuevoCodigo] = useState('')
   const [nuevoNombre, setNuevoNombre] = useState('')
   const [nuevaCantidad, setNuevaCantidad] = useState('')
@@ -44,29 +47,36 @@ function Inventario() {
   const { mensaje, mostrarMensaje } = useMensaje(4000)
   const [modalOpen, setModalOpen] = useState(false)
 
-  const { sortKey, sortDir, filtros, setFiltro, handleSort, sorted } = useSortFilter(
+  const { sortKey, sortDir, filtros, setFiltro, handleSort } = useSortFilter(
     items, columns, 'codigo', 'asc'
   )
 
   useEffect(() => {
-    Promise.all([
-      fetch('/api/inventario'),
-      fetch('/api/areas'),
-    ])
-      .then(async ([resItems, resAreas]) => {
-        if (!resItems.ok) throw new Error('Error al obtener inventario')
-        if (!resAreas.ok) throw new Error('Error al obtener áreas')
-        const data = await resItems.json()
-        const areasData = await resAreas.json()
-        setItems(data)
-        setAreas(areasData)
-        setLoading(false)
+    fetch('/api/areas')
+      .then(async res => {
+        if (!res.ok) throw new Error('Error al obtener áreas')
+        setAreas(await res.json())
       })
-      .catch(err => {
-        setError(err.message)
-        setLoading(false)
-      })
+      .catch(err => { setError(err.message); setLoading(false) })
   }, [])
+
+  useEffect(() => {
+    setLoading(true)
+    const params = new URLSearchParams({
+      page: String(page), page_size: '100', sort: String(sortKey), dir: sortDir,
+    })
+    for (const [k, v] of Object.entries(filtros)) if (v) params.set(k, v)
+    fetch(`/api/inventario?${params}`)
+      .then(async res => {
+        if (!res.ok) throw new Error('Error al obtener inventario')
+        const data = await res.json()
+        setItems(data.items)
+        setTotalPages(data.total_pages)
+        setError(null)
+        setLoading(false)
+      })
+      .catch(err => { setError(err.message); setLoading(false) })
+  }, [page, sortKey, sortDir, filtros])
 
   function limpiarForm() {
     setNuevoCodigo('')
@@ -115,6 +125,7 @@ function Inventario() {
       })
       .then(item => {
         setItems(prev => [...prev, item])
+        setPage(1)
         limpiarForm()
         setModalOpen(false)
         mostrarMensaje('exito', `Item "${item.nombre}" agregado`)
@@ -127,14 +138,23 @@ function Inventario() {
   }
 
   function handleDeleted(id: number) {
-    setItems(prev => prev.filter(i => i.id !== id))
+    setItems(prev => {
+      const next = prev.filter(i => i.id !== id)
+      if (next.length === 0 && page > 1) setPage(page - 1)
+      return next
+    })
   }
 
   return (
     <section id="patients-page">
       <div className="inventario-header">
         <h1>Inventario</h1>
-        <button className="btn-agregar" onClick={() => setModalOpen(true)}>+ Agregar Item</button>
+        <div className="inventario-nav">
+          {!loading && !error && totalPages > 1 && (
+            <Paginacion page={page} totalPages={totalPages} onChange={setPage} />
+          )}
+          <button className="btn-agregar" onClick={() => setModalOpen(true)}>+ Agregar Item</button>
+        </div>
       </div>
 
       <MensajeToast mensaje={mensaje} />
@@ -183,7 +203,7 @@ function Inventario() {
       {loading && <p className="status">Cargando inventario...</p>}
       {error && <p className="status error">{error}</p>}
       {!loading && !error && items.length === 0 && (
-        <p className="status">No hay items en inventario.</p>
+        <p className="status">Sin resultados.</p>
       )}
 
       {!loading && !error && items.length > 0 && (
@@ -192,33 +212,29 @@ function Inventario() {
             <CrudTableHead
               columns={columns}
               filtros={filtros}
-              onFiltroChange={setFiltro}
+              onFiltroChange={(k, v) => { setFiltro(k, v); setPage(1) }}
               sortKey={sortKey}
               sortDir={sortDir}
-              onSort={handleSort}
+              onSort={k => { handleSort(k); setPage(1) }}
             />
             <tbody>
-              {sorted.length === 0 ? (
-                <tr>
-                  <td colSpan={columns.length + 1} style={{ textAlign: 'center', padding: '24px 0' }}>
-                    Sin resultados.
-                  </td>
-                </tr>
-              ) : (
-                sorted.map(item => (
-                  <InventarioRow
-                    key={item.id}
-                    item={item}
-                    areas={areas}
-                    onUpdated={handleUpdated}
-                    onDeleted={handleDeleted}
-                    mostrarMensaje={mostrarMensaje}
-                  />
-                ))
-              )}
+              {items.map(item => (
+                <InventarioRow
+                  key={item.id}
+                  item={item}
+                  areas={areas}
+                  onUpdated={handleUpdated}
+                  onDeleted={handleDeleted}
+                  mostrarMensaje={mostrarMensaje}
+                />
+              ))}
             </tbody>
           </table>
         </div>
+      )}
+
+      {!loading && !error && totalPages > 1 && (
+        <Paginacion page={page} totalPages={totalPages} onChange={setPage} />
       )}
     </section>
   )

@@ -130,7 +130,7 @@ def create_patient():
         filtro_id=filtro_id,
         fecha_inicio_filtro=fecha_inicio_filtro,
         fecha_fin_filtro=fecha_fin_filtro,
-        observaciones=data.get('observaciones', '').strip() or None,
+        observaciones=(data.get('observaciones') or '').strip() or None,
     )
     db.session.add(paciente)
     db.session.commit()
@@ -224,7 +224,7 @@ def update_patient(no_expediente):
     paciente.filtro_id = filtro_id
     paciente.fecha_inicio_filtro = fecha_inicio_filtro
     paciente.fecha_fin_filtro = fecha_fin_filtro
-    paciente.observaciones = data.get('observaciones', '').strip() or None
+    paciente.observaciones = (data.get('observaciones') or '').strip() or None
 
     db.session.commit()
     return jsonify(paciente_to_dict(paciente))

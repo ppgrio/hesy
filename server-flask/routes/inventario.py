@@ -3,15 +3,13 @@ from models.init import db
 from models.inventario import Inventario
 from models.areas import Areas
 from models.medicamentos_sesion import MedicamentosSesion
-from sqlalchemy.orm import joinedload
+from sqlalchemy import String
 
 inventario_bp = Blueprint('inventario', __name__)
 
 
-@inventario_bp.route('/api/inventario')
-def get_inventario():
-    items = Inventario.query.options(joinedload(Inventario.area)).all()
-    return jsonify([{
+def serializar(i):
+    return {
         'id': i.id,
         'codigo': i.codigo,
         'nombre': i.nombre,
@@ -19,7 +17,41 @@ def get_inventario():
         'caducidad': i.caducidad.isoformat() if i.caducidad else None,
         'area_id': i.area_id,
         'area': i.area.nombre if i.area else None,
-    } for i in items])
+    }
+
+
+@inventario_bp.route('/api/inventario')
+def get_inventario():
+    page = request.args.get('page', 1, type=int)
+    page_size = min(max(request.args.get('page_size', 100, type=int), 1), 1000)
+    dir_ = 'desc' if request.args.get('dir', 'asc') == 'desc' else 'asc'
+
+    q = Inventario.query.join(Areas, Inventario.area_id == Areas.id, isouter=True)
+    for key in ('codigo', 'nombre', 'cantidad', 'caducidad', 'area'):
+        v = request.args.get(key, '').strip()
+        if not v:
+            continue
+        col = Areas.nombre if key == 'area' else getattr(Inventario, key)
+        if key in ('codigo', 'cantidad'):
+            try:
+                q = q.filter(col == int(v))
+            except ValueError:
+                pass
+        else:
+            q = q.filter(col.cast(String).ilike(f'%{v}%'))
+
+    sort = request.args.get('sort', 'codigo')
+    sort_col = Areas.nombre if sort == 'area' else getattr(Inventario, sort, Inventario.codigo)
+    q = q.order_by(sort_col.desc() if dir_ == 'desc' else sort_col.asc())
+
+    pag = q.paginate(page=page, per_page=page_size, error_out=False)
+    return jsonify({
+        'items': [serializar(i) for i in pag.items],
+        'total': pag.total,
+        'page': pag.page,
+        'page_size': page_size,
+        'total_pages': pag.pages,
+    })
 
 
 @inventario_bp.route('/api/inventario', methods=['POST'])
@@ -70,15 +102,7 @@ def create_inventario():
     )
     db.session.add(item)
     db.session.commit()
-    return jsonify({
-        'id': item.id,
-        'codigo': item.codigo,
-        'nombre': item.nombre,
-        'cantidad': item.cantidad,
-        'caducidad': item.caducidad.isoformat() if item.caducidad else None,
-        'area_id': item.area_id,
-        'area': item.area.nombre if item.area else None,
-    }), 201
+    return jsonify(serializar(item)), 201
 
 
 @inventario_bp.route('/api/inventario/<int:id>', methods=['PUT'])
@@ -133,15 +157,7 @@ def update_inventario(id):
     item.area_id = area_id
 
     db.session.commit()
-    return jsonify({
-        'id': item.id,
-        'codigo': item.codigo,
-        'nombre': item.nombre,
-        'cantidad': item.cantidad,
-        'caducidad': item.caducidad.isoformat() if item.caducidad else None,
-        'area_id': item.area_id,
-        'area': item.area.nombre if item.area else None,
-    })
+    return jsonify(serializar(item))
 
 
 @inventario_bp.route('/api/inventario/<int:id>', methods=['DELETE'])
