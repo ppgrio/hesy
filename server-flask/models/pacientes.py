@@ -1,7 +1,8 @@
 from models.init import db
 
 class Pacientes(db.Model):
-    no_expediente = db.Column(db.Integer , primary_key=True)
+    id = db.Column(db.Integer, primary_key=True)
+    no_expediente = db.Column(db.Integer, unique=True)
     nombre = db.Column(db.String(60), nullable=False, index=True)
     fecha_nacimiento = db.Column(db.Date, nullable=False)
     hierros = db.Column(db.Integer)

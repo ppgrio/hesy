@@ -16,7 +16,8 @@ interface Filtro {
 }
 
 interface PacienteItem {
-  no_expediente: number
+  id: number
+  no_expediente: number | null
   nombre: string
   fecha_nacimiento: string | null
   hierros: number | null
@@ -39,12 +40,13 @@ interface Props {
   accesos: Acceso[]
   filtros: Filtro[]
   onUpdated: (paciente: PacienteItem) => void
-  onDeleted: (no_expediente: number) => void
+  onDeleted: (id: number) => void
   mostrarMensaje: (tipo: 'error' | 'exito', texto: string) => void
 }
 
 function PacienteRow({ paciente, doctores, accesos, filtros, onUpdated, onDeleted, mostrarMensaje }: Props) {
   const [editing, setEditing] = useState(false)
+  const [editNoExpediente, setEditNoExpediente] = useState('')
   const [editNombre, setEditNombre] = useState('')
   const [editFechaNacimiento, setEditFechaNacimiento] = useState('')
   const [editHierros, setEditHierros] = useState('')
@@ -59,6 +61,7 @@ function PacienteRow({ paciente, doctores, accesos, filtros, onUpdated, onDelete
 
   function iniciarEdicion() {
     setEditing(true)
+    setEditNoExpediente(paciente.no_expediente != null ? String(paciente.no_expediente) : '')
     setEditNombre(paciente.nombre)
     setEditFechaNacimiento(paciente.fecha_nacimiento ?? '')
     setEditHierros(paciente.hierros != null ? String(paciente.hierros) : '')
@@ -88,6 +91,8 @@ function PacienteRow({ paciente, doctores, accesos, filtros, onUpdated, onDelete
     }
 
     const body: Record<string, unknown> = { nombre }
+    if (editNoExpediente.trim()) body.no_expediente = parseInt(editNoExpediente, 10)
+    else body.no_expediente = null
     if (editFechaNacimiento) body.fecha_nacimiento = editFechaNacimiento
     else body.fecha_nacimiento = null
     if (editHierros.trim()) body.hierros = parseInt(editHierros, 10)
@@ -109,7 +114,7 @@ function PacienteRow({ paciente, doctores, accesos, filtros, onUpdated, onDelete
     if (editObservaciones.trim()) body.observaciones = editObservaciones.trim()
     else body.observaciones = null
 
-    fetch(`/api/patient/${paciente.no_expediente}`, {
+    fetch(`/api/patient/${paciente.id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
@@ -131,13 +136,13 @@ function PacienteRow({ paciente, doctores, accesos, filtros, onUpdated, onDelete
 
   function handleDelete() {
     if (!confirm(`¿Eliminar al paciente "${paciente.nombre}"?`)) return
-    fetch(`/api/patient/${paciente.no_expediente}`, { method: 'DELETE' })
+    fetch(`/api/patient/${paciente.id}`, { method: 'DELETE' })
       .then(async res => {
         if (!res.ok) {
           const err = await res.json()
           throw new Error(err.error || 'Error al eliminar paciente')
         }
-        onDeleted(paciente.no_expediente)
+        onDeleted(paciente.id)
         mostrarMensaje('exito', `Paciente "${paciente.nombre}" eliminado`)
       })
       .catch(err => mostrarMensaje('error', err.message))
@@ -153,9 +158,18 @@ function PacienteRow({ paciente, doctores, accesos, filtros, onUpdated, onDelete
   return (
     <tr>
       {editing ? (
-        <td style={thStyle}>{paciente.no_expediente}</td>
+        <td style={thStyle}>
+          <input
+            type="text"
+            inputMode="numeric"
+            value={editNoExpediente}
+            onChange={e => setEditNoExpediente(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Enter') guardarEdicion(); if (e.key === 'Escape') cancelarEdicion() }}
+            className="input-editar"
+          />
+        </td>
       ) : (
-        <td style={thStyle}>{paciente.no_expediente}</td>
+        <td style={thStyle}>{paciente.no_expediente ?? '—'}</td>
       )}
       {editing ? (
         <>

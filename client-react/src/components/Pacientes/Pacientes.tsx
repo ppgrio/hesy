@@ -5,6 +5,7 @@ import CrudModal from '../shared/CrudModal'
 import CrudTableHead from '../shared/CrudTableHead'
 import useSortFilter from '../shared/useSortFilter'
 import type { ColumnConfig } from '../shared/useSortFilter'
+import Paginacion from '../shared/Paginacion'
 import PacienteRow from './PacienteRow'
 import '../shared/crud.css'
 
@@ -24,7 +25,8 @@ interface Filtro {
 }
 
 interface PacienteItem {
-  no_expediente: number
+  id: number
+  no_expediente: number | null
   nombre: string
   fecha_nacimiento: string | null
   hierros: number | null
@@ -63,10 +65,12 @@ function Pacientes() {
   const [filtros, setFiltros] = useState<Filtro[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [page, setPage] = useState(1)
+  const [totalPages, setTotalPages] = useState(1)
   const { mensaje, mostrarMensaje } = useMensaje(4000)
   const [modalOpen, setModalOpen] = useState(false)
 
-  const { sortKey, sortDir, filtros: filtrosState, setFiltro, handleSort, sorted } = useSortFilter(
+  const { sortKey, sortDir, filtros: filtrosState, setFiltro, handleSort } = useSortFilter(
     pacientes, columns, 'no_expediente', 'desc'
   )
 
@@ -85,31 +89,37 @@ function Pacientes() {
 
   useEffect(() => {
     Promise.all([
-      fetch('/api/patient'),
       fetch('/api/doctor'),
       fetch('/api/accesos'),
       fetch('/api/filtros'),
     ])
-      .then(async ([resPac, resDoc, resAcc, resFil]) => {
-        if (!resPac.ok) throw new Error('Error al obtener pacientes')
+      .then(async ([resDoc, resAcc, resFil]) => {
         if (!resDoc.ok) throw new Error('Error al obtener doctores')
         if (!resAcc.ok) throw new Error('Error al obtener accesos')
         if (!resFil.ok) throw new Error('Error al obtener filtros')
-        const pacData = await resPac.json()
-        const docData = await resDoc.json()
-        const accData = await resAcc.json()
-        const filData = await resFil.json()
-        setPacientes(pacData)
-        setDoctores(docData)
-        setAccesos(accData)
-        setFiltros(filData)
-        setLoading(false)
+        setDoctores(await resDoc.json())
+        setAccesos(await resAcc.json())
+        setFiltros(await resFil.json())
       })
-      .catch(err => {
-        setError(err.message)
-        setLoading(false)
-      })
+      .catch(err => { setError(err.message); setLoading(false) })
   }, [])
+
+  useEffect(() => {
+    const params = new URLSearchParams({
+      page: String(page), page_size: '100', sort: String(sortKey), dir: sortDir,
+    })
+    for (const [k, v] of Object.entries(filtrosState)) if (v) params.set(k, v)
+    fetch(`/api/patient?${params}`)
+      .then(async res => {
+        if (!res.ok) throw new Error('Error al obtener pacientes')
+        const data = await res.json()
+        setPacientes(data.items)
+        setTotalPages(data.total_pages)
+        setError(null)
+        setLoading(false)
+      })
+      .catch(err => { setError(err.message); setLoading(false) })
+  }, [page, sortKey, sortDir, filtrosState])
 
   function limpiarForm() {
     setNuevoExpediente('')
@@ -164,6 +174,7 @@ function Pacientes() {
       })
       .then(paciente => {
         setPacientes(prev => [...prev, paciente])
+        setPage(1)
         limpiarForm()
         setModalOpen(false)
         mostrarMensaje('exito', `Paciente "${paciente.nombre}" agregado`)
@@ -172,18 +183,27 @@ function Pacientes() {
   }
 
   function handleUpdated(paciente: PacienteItem) {
-    setPacientes(prev => prev.map(p => (p.no_expediente === paciente.no_expediente ? paciente : p)))
+    setPacientes(prev => prev.map(p => (p.id === paciente.id ? paciente : p)))
   }
 
-  function handleDeleted(no_expediente: number) {
-    setPacientes(prev => prev.filter(p => p.no_expediente !== no_expediente))
+  function handleDeleted(id: number) {
+    setPacientes(prev => {
+      const next = prev.filter(p => p.id !== id)
+      if (next.length === 0 && page > 1) setPage(page - 1)
+      return next
+    })
   }
 
   return (
     <section id="patients-page">
       <div className="inventario-header">
         <h1>Pacientes</h1>
-        <button className="btn-agregar" onClick={() => setModalOpen(true)}>+ Agregar Paciente</button>
+        <div className="inventario-nav">
+          {!loading && !error && totalPages > 1 && (
+            <Paginacion page={page} totalPages={totalPages} onChange={setPage} />
+          )}
+          <button className="btn-agregar" onClick={() => setModalOpen(true)}>+ Agregar Paciente</button>
+        </div>
       </div>
 
       <MensajeToast mensaje={mensaje} />
@@ -283,32 +303,28 @@ function Pacientes() {
 
       {loading && <p className="status">Cargando pacientes...</p>}
       {error && <p className="status error">{error}</p>}
-      {!loading && !error && pacientes.length === 0 && (
-        <p className="status">No hay pacientes registrados.</p>
-      )}
-
-      {!loading && !error && pacientes.length > 0 && (
+      {!loading && !error && (
         <div className="table-wrapper">
           <table>
             <CrudTableHead
               columns={columns}
               filtros={filtrosState}
-              onFiltroChange={setFiltro}
+              onFiltroChange={(k, v) => { setFiltro(k, v); setPage(1) }}
               sortKey={sortKey}
               sortDir={sortDir}
-              onSort={handleSort}
+              onSort={k => { handleSort(k); setPage(1) }}
             />
             <tbody>
-              {sorted.length === 0 ? (
+              {pacientes.length === 0 ? (
                 <tr>
                   <td colSpan={columns.length + 1} style={{ textAlign: 'center', padding: '24px 0' }}>
                     Sin resultados.
                   </td>
                 </tr>
               ) : (
-                sorted.map(p => (
+                pacientes.map(p => (
                   <PacienteRow
-                    key={p.no_expediente}
+                    key={p.id}
                     paciente={p}
                     doctores={doctores}
                     accesos={accesos}
@@ -322,6 +338,10 @@ function Pacientes() {
             </tbody>
           </table>
         </div>
+      )}
+
+      {!loading && !error && totalPages > 1 && (
+        <Paginacion page={page} totalPages={totalPages} onChange={setPage} />
       )}
     </section>
   )

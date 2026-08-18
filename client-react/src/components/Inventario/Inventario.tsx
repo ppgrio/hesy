@@ -61,7 +61,6 @@ function Inventario() {
   }, [])
 
   useEffect(() => {
-    setLoading(true)
     const params = new URLSearchParams({
       page: String(page), page_size: '100', sort: String(sortKey), dir: sortDir,
     })
@@ -202,11 +201,7 @@ function Inventario() {
 
       {loading && <p className="status">Cargando inventario...</p>}
       {error && <p className="status error">{error}</p>}
-      {!loading && !error && items.length === 0 && (
-        <p className="status">Sin resultados.</p>
-      )}
-
-      {!loading && !error && items.length > 0 && (
+      {!loading && !error && (
         <div className="table-wrapper">
           <table>
             <CrudTableHead
@@ -218,16 +213,24 @@ function Inventario() {
               onSort={k => { handleSort(k); setPage(1) }}
             />
             <tbody>
-              {items.map(item => (
-                <InventarioRow
-                  key={item.id}
-                  item={item}
-                  areas={areas}
-                  onUpdated={handleUpdated}
-                  onDeleted={handleDeleted}
-                  mostrarMensaje={mostrarMensaje}
-                />
-              ))}
+              {items.length === 0 ? (
+                <tr>
+                  <td colSpan={columns.length + 1} style={{ textAlign: 'center', padding: '24px 0' }}>
+                    Sin resultados.
+                  </td>
+                </tr>
+              ) : (
+                items.map(item => (
+                  <InventarioRow
+                    key={item.id}
+                    item={item}
+                    areas={areas}
+                    onUpdated={handleUpdated}
+                    onDeleted={handleDeleted}
+                    mostrarMensaje={mostrarMensaje}
+                  />
+                ))
+              )}
             </tbody>
           </table>
         </div>

@@ -1,7 +1,7 @@
 import { useState } from 'react'
 
 interface Paciente {
-  no_expediente: number
+  no_expediente: number | null
   nombre: string
   usos_restantes: number | null
 }
@@ -119,8 +119,8 @@ function SesionRow({ sesion, pacientes, filtros, accesos, onUpdated, onDeleted, 
             >
               <option value="">Seleccionar paciente</option>
               {pacientes.map(p => (
-                <option key={p.no_expediente} value={p.no_expediente}>
-                  {p.nombre} ({p.usos_restantes != null ? p.usos_restantes : '—'} usos)
+                <option key={p.id} value={p.id}>
+                  {p.nombre} ({p.no_expediente != null ? p.no_expediente : '—'}) ({p.usos_restantes != null ? p.usos_restantes : '—'} usos)
                 </option>
               ))}
             </select>

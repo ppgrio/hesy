@@ -140,7 +140,7 @@ def seed():
         db.session.commit()
         print('  1000 pacientes listos.')
 
-        pacientes_ids = [p.no_expediente for p in Pacientes.query.all()]
+        pacientes_ids = [p.id for p in Pacientes.query.all()]
 
         print('Sembrando sesiones (30-50/día)...')
         start_date = date(2025, 1, 1)

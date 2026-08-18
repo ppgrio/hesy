@@ -121,7 +121,7 @@ function Calendario() {
   function handlePacienteChange(id: string) {
     setPacienteId(id)
     if (id) {
-      const p = pacientes.find(p => p.no_expediente === parseInt(id, 10))
+      const p = pacientes.find(p => p.id === parseInt(id, 10))
       if (p) {
         setFiltroSeleccionado(p.filtro || '')
         setAccesoSeleccionado(p.acceso || '')
@@ -136,7 +136,7 @@ function Calendario() {
     if (!modalCrear || !pacienteId) return
     const { diaIdx, hora } = modalCrear
     const fecha_hora = formatISOtoDatetime(dias[diaIdx], hora)
-    const p = pacientes.find(p => p.no_expediente === parseInt(pacienteId, 10))
+    const p = pacientes.find(p => p.id === parseInt(pacienteId, 10))
     fetch('/api/session', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

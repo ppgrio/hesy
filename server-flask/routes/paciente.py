@@ -6,12 +6,14 @@ from models.accesos import Accesos
 from models.filtros import Filtros
 from models.sesiones import Sesiones
 from sqlalchemy.orm import joinedload
+from utils import normalizar_cadena, col_sin_acentos
 
 paciente_bp = Blueprint('paciente', __name__)
 
 
 def paciente_to_dict(p):
     return {
+        'id': p.id,
         'no_expediente': p.no_expediente,
         'nombre': p.nombre,
         'fecha_nacimiento': p.fecha_nacimiento.isoformat() if p.fecha_nacimiento else None,
@@ -32,12 +34,57 @@ def paciente_to_dict(p):
 
 @paciente_bp.route('/api/patient', methods=['GET'])
 def get_patients():
-    pacientes = Pacientes.query.options(
+    if 'page' not in request.args:
+        pacientes = Pacientes.query.options(
+            joinedload(Pacientes.doctor),
+            joinedload(Pacientes.acceso),
+            joinedload(Pacientes.filtro),
+        ).all()
+        return jsonify([paciente_to_dict(p) for p in pacientes])
+
+    page = request.args.get('page', 1, type=int)
+    page_size = min(max(request.args.get('page_size', 100, type=int), 1), 1000)
+    dir_ = 'desc' if request.args.get('dir', 'asc') == 'desc' else 'asc'
+
+    q = Pacientes.query.options(
         joinedload(Pacientes.doctor),
         joinedload(Pacientes.acceso),
         joinedload(Pacientes.filtro),
-    ).all()
-    return jsonify([paciente_to_dict(p) for p in pacientes])
+    )
+    q = q.join(Doctores, Pacientes.doctor_id == Doctores.id, isouter=True)
+    q = q.join(Accesos, Pacientes.acceso_id == Accesos.id, isouter=True)
+    q = q.join(Filtros, Pacientes.filtro_id == Filtros.id, isouter=True)
+
+    unidas = {'doctor': Doctores.nombre, 'acceso': Accesos.tipo, 'filtro': Filtros.estado}
+    numericas = ('no_expediente', 'hierros', 'eritropoyetina', 'usos_restantes')
+
+    for key in unidas.keys() | {'no_expediente', 'nombre', 'fecha_nacimiento', 'hierros',
+                                'eritropoyetina', 'usos_restantes', 'fecha_inicio_filtro',
+                                'fecha_fin_filtro', 'observaciones'}:
+        v = request.args.get(key, '').strip()
+        if not v:
+            continue
+        col = unidas.get(key) or getattr(Pacientes, key)
+        if key in numericas:
+            try:
+                q = q.filter(col == int(v))
+            except ValueError:
+                pass
+        else:
+            q = q.filter(col_sin_acentos(col).ilike(f'%{normalizar_cadena(v)}%'))
+
+    sort = request.args.get('sort', 'no_expediente')
+    sort_col = unidas.get(sort) or getattr(Pacientes, sort, Pacientes.no_expediente)
+    q = q.order_by(sort_col.desc() if dir_ == 'desc' else sort_col.asc())
+
+    pag = q.paginate(page=page, per_page=page_size, error_out=False)
+    return jsonify({
+        'items': [paciente_to_dict(p) for p in pag.items],
+        'total': pag.total,
+        'page': pag.page,
+        'page_size': page_size,
+        'total_pages': pag.pages,
+    })
 
 
 @paciente_bp.route('/api/patient', methods=['POST'])
@@ -115,7 +162,7 @@ def create_patient():
             no_expediente = int(no_expediente)
         except (TypeError, ValueError):
             return jsonify({'error': 'El número de expediente debe ser un número entero'}), 400
-        if Pacientes.query.get(no_expediente):
+        if Pacientes.query.filter_by(no_expediente=no_expediente).first():
             return jsonify({'error': 'Ya existe un paciente con ese número de expediente'}), 409
 
     paciente = Pacientes(
@@ -138,9 +185,9 @@ def create_patient():
     return jsonify(paciente_to_dict(paciente)), 201
 
 
-@paciente_bp.route('/api/patient/<int:no_expediente>', methods=['PUT'])
-def update_patient(no_expediente):
-    paciente = Pacientes.query.get_or_404(no_expediente)
+@paciente_bp.route('/api/patient/<int:id>', methods=['PUT'])
+def update_patient(id):
+    paciente = Pacientes.query.get_or_404(id)
     data = request.get_json()
 
     nombre = data.get('nombre', '').strip()
@@ -214,6 +261,17 @@ def update_patient(no_expediente):
     else:
         fecha_fin_filtro = None
 
+    no_expediente = data.get('no_expediente')
+    if no_expediente is not None:
+        try:
+            no_expediente = int(no_expediente)
+        except (TypeError, ValueError):
+            return jsonify({'error': 'El número de expediente debe ser un número entero'}), 400
+        existente = Pacientes.query.filter_by(no_expediente=no_expediente).first()
+        if existente and existente.id != id:
+            return jsonify({'error': 'Ya existe un paciente con ese número de expediente'}), 409
+
+    paciente.no_expediente = no_expediente
     paciente.nombre = nombre
     paciente.fecha_nacimiento = fecha_nacimiento
     paciente.hierros = hierros
@@ -230,10 +288,10 @@ def update_patient(no_expediente):
     return jsonify(paciente_to_dict(paciente))
 
 
-@paciente_bp.route('/api/patient/<int:no_expediente>', methods=['DELETE'])
-def delete_patient(no_expediente):
-    paciente = Pacientes.query.get_or_404(no_expediente)
-    sesiones_count = Sesiones.query.filter_by(paciente_id=no_expediente).count()
+@paciente_bp.route('/api/patient/<int:id>', methods=['DELETE'])
+def delete_patient(id):
+    paciente = Pacientes.query.get_or_404(id)
+    sesiones_count = Sesiones.query.filter_by(paciente_id=id).count()
     if sesiones_count > 0:
         return jsonify({'error': f'No se puede eliminar, el paciente tiene {sesiones_count} sesión(es).'}), 409
     db.session.delete(paciente)

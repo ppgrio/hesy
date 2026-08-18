@@ -8,7 +8,8 @@ interface Session {
 }
 
 interface Patient {
-  no_expediente: number
+  id: number
+  no_expediente: number | null
   nombre: string
   acceso: string | null
   filtro: string | null

@@ -3,7 +3,7 @@ from models.init import db
 from models.inventario import Inventario
 from models.areas import Areas
 from models.medicamentos_sesion import MedicamentosSesion
-from sqlalchemy import String
+from utils import normalizar_cadena, col_sin_acentos
 
 inventario_bp = Blueprint('inventario', __name__)
 
@@ -22,6 +22,9 @@ def serializar(i):
 
 @inventario_bp.route('/api/inventario')
 def get_inventario():
+    if 'page' not in request.args:
+        return jsonify([serializar(i) for i in Inventario.query.all()])
+
     page = request.args.get('page', 1, type=int)
     page_size = min(max(request.args.get('page_size', 100, type=int), 1), 1000)
     dir_ = 'desc' if request.args.get('dir', 'asc') == 'desc' else 'asc'
@@ -38,7 +41,7 @@ def get_inventario():
             except ValueError:
                 pass
         else:
-            q = q.filter(col.cast(String).ilike(f'%{v}%'))
+            q = q.filter(col_sin_acentos(col).ilike(f'%{normalizar_cadena(v)}%'))
 
     sort = request.args.get('sort', 'codigo')
     sort_col = Areas.nombre if sort == 'area' else getattr(Inventario, sort, Inventario.codigo)
