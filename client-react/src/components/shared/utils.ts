@@ -20,4 +20,18 @@ function matchFilter(value: unknown, q: string): boolean {
   return normalizar(String(value)).includes(normalizar(q))
 }
 
-export { getMonday, formatFechaCompleta, normalizar, matchFilter }
+function validarEnteros(campos: [string, string][], error: (tipo: 'error' | 'exito', msg: string) => void, obligatorio = false): boolean {
+  for (const [etiqueta, valor] of campos) {
+    if (obligatorio && !valor.trim()) {
+      error('error', `${etiqueta} es obligatorio`)
+      return false
+    }
+    if (valor.trim() && !/^-?\d+$/.test(valor.trim())) {
+      error('error', `${etiqueta} debe ser un número entero`)
+      return false
+    }
+  }
+  return true
+}
+
+export { getMonday, formatFechaCompleta, normalizar, matchFilter, validarEnteros }

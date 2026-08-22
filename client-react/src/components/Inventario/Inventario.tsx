@@ -5,6 +5,7 @@ import CrudModal from '../shared/CrudModal'
 import CrudTableHead from '../shared/CrudTableHead'
 import useSortFilter from '../shared/useSortFilter'
 import type { ColumnConfig } from '../shared/useSortFilter'
+import { validarEnteros } from '../shared/utils'
 import Paginacion from '../shared/Paginacion'
 import InventarioRow from './InventarioRow'
 import '../shared/crud.css'
@@ -104,6 +105,7 @@ function Inventario() {
       mostrarMensaje('error', 'La cantidad no puede ser negativa')
       return
     }
+    if (!validarEnteros([['Código', nuevoCodigo]], mostrarMensaje)) return
 
     const body: Record<string, unknown> = { nombre, cantidad }
     if (nuevoCodigo.trim()) body.codigo = parseInt(nuevoCodigo, 10)

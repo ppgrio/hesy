@@ -5,6 +5,7 @@ import CrudModal from '../shared/CrudModal'
 import CrudTableHead from '../shared/CrudTableHead'
 import useSortFilter from '../shared/useSortFilter'
 import type { ColumnConfig } from '../shared/useSortFilter'
+import { validarEnteros } from '../shared/utils'
 import Paginacion from '../shared/Paginacion'
 import PacienteRow from './PacienteRow'
 import '../shared/crud.css'
@@ -147,6 +148,13 @@ function Pacientes() {
       return
     }
 
+    if (!validarEnteros([
+      ['No. expediente', nuevoExpediente],
+      ['Hierros', nuevoHierros],
+      ['Eritropoyetina', nuevoEritropoyetina],
+      ['Usos restantes', nuevoUsosRestantes],
+    ], mostrarMensaje, true)) return
+
     const body: Record<string, unknown> = { nombre }
     if (nuevoExpediente.trim()) body.no_expediente = parseInt(nuevoExpediente, 10)
     if (nuevoFechaNacimiento) body.fecha_nacimiento = nuevoFechaNacimiento
@@ -231,26 +239,28 @@ function Pacientes() {
           onChange={e => setNuevoFechaNacimiento(e.target.value)}
         />
         <input
-          type="number"
+          type="text"
+          inputMode="numeric"
           placeholder="Hierros"
           value={nuevoHierros}
           onChange={e => setNuevoHierros(e.target.value)}
           onKeyDown={e => { if (e.key === 'Enter') handleAdd() }}
         />
         <input
-          type="number"
+          type="text"
+          inputMode="numeric"
           placeholder="Eritropoyetina"
           value={nuevoEritropoyetina}
           onChange={e => setNuevoEritropoyetina(e.target.value)}
           onKeyDown={e => { if (e.key === 'Enter') handleAdd() }}
         />
         <input
-          type="number"
+          type="text"
+          inputMode="numeric"
           placeholder="Usos restantes"
           value={nuevoUsosRestantes}
           onChange={e => setNuevoUsosRestantes(e.target.value)}
           onKeyDown={e => { if (e.key === 'Enter') handleAdd() }}
-          min="0"
         />
         <select
           value={nuevoDoctorId}

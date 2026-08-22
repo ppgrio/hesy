@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { validarEnteros } from '../shared/utils'
 
 interface Doctor {
   id: number
@@ -89,6 +90,13 @@ function PacienteRow({ paciente, doctores, accesos, filtros, onUpdated, onDelete
       mostrarMensaje('error', 'El nombre no puede exceder 60 caracteres')
       return
     }
+
+    if (!validarEnteros([
+      ['No. expediente', editNoExpediente],
+      ['Hierros', editHierros],
+      ['Eritropoyetina', editEritropoyetina],
+      ['Usos restantes', editUsosRestantes],
+    ], mostrarMensaje, true)) return
 
     const body: Record<string, unknown> = { nombre }
     if (editNoExpediente.trim()) body.no_expediente = parseInt(editNoExpediente, 10)
@@ -193,7 +201,8 @@ function PacienteRow({ paciente, doctores, accesos, filtros, onUpdated, onDelete
           </td>
           <td>
             <input
-              type="number"
+              type="text"
+              inputMode="numeric"
               value={editHierros}
               onChange={e => setEditHierros(e.target.value)}
               onKeyDown={e => { if (e.key === 'Enter') guardarEdicion(); if (e.key === 'Escape') cancelarEdicion() }}
@@ -202,7 +211,8 @@ function PacienteRow({ paciente, doctores, accesos, filtros, onUpdated, onDelete
           </td>
           <td>
             <input
-              type="number"
+              type="text"
+              inputMode="numeric"
               value={editEritropoyetina}
               onChange={e => setEditEritropoyetina(e.target.value)}
               onKeyDown={e => { if (e.key === 'Enter') guardarEdicion(); if (e.key === 'Escape') cancelarEdicion() }}
@@ -211,11 +221,11 @@ function PacienteRow({ paciente, doctores, accesos, filtros, onUpdated, onDelete
           </td>
           <td>
             <input
-              type="number"
+              type="text"
+              inputMode="numeric"
               value={editUsosRestantes}
               onChange={e => setEditUsosRestantes(e.target.value)}
               onKeyDown={e => { if (e.key === 'Enter') guardarEdicion(); if (e.key === 'Escape') cancelarEdicion() }}
-              min="0"
               className="input-editar"
             />
           </td>

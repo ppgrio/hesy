@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { validarEnteros } from '../shared/utils'
 
 interface Area {
   id: number
@@ -63,6 +64,7 @@ function InventarioRow({ item, areas, onUpdated, onDeleted, mostrarMensaje }: Pr
       mostrarMensaje('error', 'La cantidad no puede ser negativa')
       return
     }
+    if (!validarEnteros([['Código', editCodigo]], mostrarMensaje)) return
 
     const body: Record<string, unknown> = { nombre, cantidad }
     if (editCodigo.trim()) body.codigo = parseInt(editCodigo, 10)
