@@ -52,7 +52,7 @@ function useSortFilter<T>(
   const filtered = useMemo(() => {
     return items.filter(item => {
       for (const col of columns) {
-        const q = filtros[col.key].toLowerCase().trim()
+        const q = (filtros[col.key] ?? '').toLowerCase().trim()
         if (q && !matchFilter(item[col.key], q)) return false
       }
       return true

@@ -3,6 +3,7 @@ import { useState } from 'react'
 interface SimpleItem {
   id: number
   value: string
+  precio?: string
 }
 
 interface Props {
@@ -11,18 +12,22 @@ interface Props {
   fieldKey: string
   entityName: string
   maxLength: number
+  precioKey?: string
+  precioLabel?: string
   onUpdated: (item: SimpleItem) => void
   onDeleted: (id: number) => void
   mostrarMensaje: (tipo: 'error' | 'exito', texto: string) => void
 }
 
-function SimpleRow({ item, apiUrl, fieldKey, entityName, maxLength, onUpdated, onDeleted, mostrarMensaje }: Props) {
+function SimpleRow({ item, apiUrl, fieldKey, entityName, maxLength, precioKey, precioLabel, onUpdated, onDeleted, mostrarMensaje }: Props) {
   const [editing, setEditing] = useState(false)
   const [editValue, setEditValue] = useState('')
+  const [editPrecio, setEditPrecio] = useState('')
 
   function iniciarEdicion() {
     setEditing(true)
     setEditValue(item.value)
+    setEditPrecio(item.precio ?? '')
   }
 
   function cancelarEdicion() {
@@ -39,10 +44,20 @@ function SimpleRow({ item, apiUrl, fieldKey, entityName, maxLength, onUpdated, o
       mostrarMensaje('error', `No puede exceder ${maxLength} caracteres`)
       return
     }
+    if (precioKey && !editPrecio.trim()) {
+      mostrarMensaje('error', `${precioLabel} es obligatorio`)
+      return
+    }
+    if (precioKey && (isNaN(Number(editPrecio)) || Number(editPrecio) < 0)) {
+      mostrarMensaje('error', `${precioLabel} debe ser un número`)
+      return
+    }
+    const body: Record<string, unknown> = { [fieldKey]: val }
+    if (precioKey) body[precioKey] = Number(editPrecio)
     fetch(`${apiUrl}/${item.id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ [fieldKey]: val }),
+      body: JSON.stringify(body),
     })
       .then(async res => {
         if (!res.ok) {
@@ -53,7 +68,8 @@ function SimpleRow({ item, apiUrl, fieldKey, entityName, maxLength, onUpdated, o
       })
       .then(updated => {
         const value = updated[fieldKey] ?? updated.nombre ?? updated.tipo ?? updated.estado ?? ''
-        onUpdated({ id: updated.id, value })
+        const precio = precioKey ? String(updated[precioKey] ?? '') : undefined
+        onUpdated({ id: updated.id, value, precio })
         cancelarEdicion()
         mostrarMensaje('exito', `${entityName} actualizado`)
       })
@@ -90,6 +106,22 @@ function SimpleRow({ item, apiUrl, fieldKey, entityName, maxLength, onUpdated, o
         </td>
       ) : (
         <td>{item.value}</td>
+      )}
+      {precioKey && (
+        editing ? (
+          <td>
+            <input
+              type="text"
+              inputMode="decimal"
+              value={editPrecio}
+              onChange={e => setEditPrecio(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter') guardarEdicion(); if (e.key === 'Escape') cancelarEdicion() }}
+              className="input-editar"
+            />
+          </td>
+        ) : (
+          <td>{item.precio ?? '—'}</td>
+        )
       )}
       <td>
         {editing ? (

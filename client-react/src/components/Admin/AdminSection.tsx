@@ -17,6 +17,8 @@ interface SectionConfig {
   entityName: string
   maxLength: number
   defaultSortDir?: 'asc' | 'desc'
+  precioKey?: string
+  precioLabel?: string
 }
 
 interface RawItem {
@@ -29,10 +31,11 @@ const columns: ColumnConfig<SimpleItem>[] = [
   { key: 'value', label: '' },
 ]
 
-function mapItems(data: RawItem[], fieldKey: string): SimpleItem[] {
+function mapItems(data: RawItem[], fieldKey: string, precioKey?: string): SimpleItem[] {
   return data.map((item: RawItem) => ({
     id: item.id,
     value: String(item[fieldKey] ?? ''),
+    precio: precioKey ? String(item[precioKey] ?? '') : undefined,
   }))
 }
 
@@ -41,6 +44,7 @@ function AdminSection({ config }: { config: SectionConfig }) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [nuevoValor, setNuevoValor] = useState('')
+  const [nuevoPrecio, setNuevoPrecio] = useState('')
   const { mensaje, mostrarMensaje } = useMensaje(4000)
   const [modalOpen, setModalOpen] = useState(false)
 
@@ -48,6 +52,7 @@ function AdminSection({ config }: { config: SectionConfig }) {
     { key: 'id', label: 'ID' },
     { key: 'value', label: config.fieldLabel },
   ]
+  if (config.precioKey) cols.push({ key: 'precio', label: config.precioLabel ?? '' })
 
   const { sortKey, sortDir, filtros, setFiltro, handleSort, sorted } = useSortFilter(
     items, cols, 'id', config.defaultSortDir ?? 'asc'
@@ -60,14 +65,14 @@ function AdminSection({ config }: { config: SectionConfig }) {
         return res.json()
       })
       .then((data: RawItem[]) => {
-        setItems(mapItems(data, config.fieldKey))
+        setItems(mapItems(data, config.fieldKey, config.precioKey))
         setLoading(false)
       })
       .catch(err => {
         setError(err.message)
         setLoading(false)
       })
-  }, [config.apiUrl, config.entityName, config.fieldKey])
+  }, [config.apiUrl, config.entityName, config.fieldKey, config.precioKey])
 
   function handleAdd() {
     const val = nuevoValor.trim()
@@ -79,10 +84,20 @@ function AdminSection({ config }: { config: SectionConfig }) {
       mostrarMensaje('error', `No puede exceder ${config.maxLength} caracteres`)
       return
     }
+    if (config.precioKey && !nuevoPrecio.trim()) {
+      mostrarMensaje('error', `${config.precioLabel} es obligatorio`)
+      return
+    }
+    if (config.precioKey && (isNaN(Number(nuevoPrecio)) || Number(nuevoPrecio) < 0)) {
+      mostrarMensaje('error', `${config.precioLabel} debe ser un número`)
+      return
+    }
+    const body: Record<string, unknown> = { [config.fieldKey]: val }
+    if (config.precioKey) body[config.precioKey] = Number(nuevoPrecio)
     fetch(config.apiUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ [config.fieldKey]: val }),
+      body: JSON.stringify(body),
     })
       .then(async res => {
         if (!res.ok) {
@@ -93,8 +108,10 @@ function AdminSection({ config }: { config: SectionConfig }) {
       })
       .then((created: RawItem) => {
         const value = String(created[config.fieldKey] ?? '')
-        setItems(prev => [...prev, { id: created.id, value }])
+        const precio = config.precioKey ? String(created[config.precioKey] ?? '') : undefined
+        setItems(prev => [...prev, { id: created.id, value, precio }])
         setNuevoValor('')
+        setNuevoPrecio('')
         setModalOpen(false)
         mostrarMensaje('exito', `${config.entityName} "${value}" agregado`)
       })
@@ -128,6 +145,16 @@ function AdminSection({ config }: { config: SectionConfig }) {
           onChange={e => setNuevoValor(e.target.value)}
           onKeyDown={e => { if (e.key === 'Enter') handleAdd() }}
         />
+        {config.precioKey && (
+          <input
+            type="text"
+            inputMode="decimal"
+            placeholder={config.precioLabel}
+            value={nuevoPrecio}
+            onChange={e => setNuevoPrecio(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Enter') handleAdd() }}
+          />
+        )}
         <button onClick={handleAdd}>Agregar</button>
       </CrudModal>
 
@@ -164,6 +191,8 @@ function AdminSection({ config }: { config: SectionConfig }) {
                     fieldKey={config.fieldKey}
                     entityName={config.entityName}
                     maxLength={config.maxLength}
+                    precioKey={config.precioKey}
+                    precioLabel={config.precioLabel}
                     onUpdated={handleUpdated}
                     onDeleted={handleDeleted}
                     mostrarMensaje={mostrarMensaje}

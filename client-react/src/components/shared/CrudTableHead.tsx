@@ -19,7 +19,7 @@ function CrudTableHead<T>({ columns, filtros, onFiltroChange, sortKey, sortDir, 
               type="text"
               className="filtro-input"
               placeholder={col.label}
-              value={filtros[col.key]}
+              value={filtros[col.key] ?? ''}
               onChange={e => onFiltroChange(col.key, e.target.value)}
             />
           </th>

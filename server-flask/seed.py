@@ -43,7 +43,7 @@ doctores_nombres = [
 
 accesos_tipos = ['FAV', 'MHK', 'PMCAT']
 
-filtros_estados = ['Nuevo', 'Reuso', 'Desechable']
+filtros_estados = [('Nuevo', 100.00), ('Reuso', 50.00), ('Desechable', 10.00)]
 
 areas_nombres = ['Bodega', 'Carrito rojo', 'Administracion']
 
@@ -85,8 +85,8 @@ def seed():
         accesos = Accesos.query.all()
 
         print('Sembrando filtros...')
-        for estado in filtros_estados:
-            db.session.add(Filtros(estado=estado))
+        for estado, precio in filtros_estados:
+            db.session.add(Filtros(estado=estado, precio=precio))
         db.session.commit()
         filtros = Filtros.query.all()
 

@@ -41,6 +41,8 @@ const sections: SectionConfig[] = [
     fieldPlaceholder: 'Estado del filtro',
     entityName: 'Filtro',
     maxLength: 10,
+    precioKey: 'precio',
+    precioLabel: 'Precio',
   },
   {
     title: 'Métodos de pago',
