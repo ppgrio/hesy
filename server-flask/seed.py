@@ -10,6 +10,7 @@ from models.filtros import Filtros
 from models.sesiones import Sesiones
 from models.areas import Areas
 from models.inventario import Inventario
+from models.metodo_pago import MetodoPago
 
 app = Flask(__name__)
 CORS(app)
@@ -45,6 +46,8 @@ accesos_tipos = ['FAV', 'MHK', 'PMCAT']
 filtros_estados = ['Nuevo', 'Reuso', 'Desechable']
 
 areas_nombres = ['Bodega', 'Carrito rojo', 'Administracion']
+
+metodos_pago_nombres = ['Efectivo', 'Tarjeta', 'Transferencia']
 
 inventario_nombres_base = [
     'Heparina', 'Suero Fisiológico', 'Suero Fisiológico', 'Agua Estéril',
@@ -92,6 +95,11 @@ def seed():
             db.session.add(Areas(nombre=nombre))
         db.session.commit()
         areas = Areas.query.all()
+
+        print('Sembrando métodos de pago...')
+        for nombre in metodos_pago_nombres:
+            db.session.add(MetodoPago(nombre=nombre))
+        db.session.commit()
 
         print('Sembrando 100000 medicamentos...')
         for i in range(100000):

@@ -42,6 +42,15 @@ const sections: SectionConfig[] = [
     entityName: 'Filtro',
     maxLength: 10,
   },
+  {
+    title: 'Métodos de pago',
+    apiUrl: '/api/metodos-pago',
+    fieldKey: 'nombre',
+    fieldLabel: 'Nombre',
+    fieldPlaceholder: 'Nombre del método de pago',
+    entityName: 'Método de pago',
+    maxLength: 30,
+  },
 ]
 
 function Admin() {
