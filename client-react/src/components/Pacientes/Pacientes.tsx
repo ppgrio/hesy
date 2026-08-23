@@ -5,7 +5,7 @@ import CrudModal from '../shared/CrudModal'
 import CrudTableHead from '../shared/CrudTableHead'
 import useSortFilter from '../shared/useSortFilter'
 import type { ColumnConfig } from '../shared/useSortFilter'
-import { validarEnteros } from '../shared/utils'
+import { validarEnteros, validarFlotante } from '../shared/utils'
 import Paginacion from '../shared/Paginacion'
 import PacienteRow from './PacienteRow'
 import '../shared/crud.css'
@@ -33,6 +33,7 @@ interface PacienteItem {
   hierros: number | null
   eritropoyetina: number | null
   usos_restantes: number | null
+  credito: number | null
   observaciones: string | null
   fecha_inicio_filtro: string | null
   fecha_fin_filtro: string | null
@@ -51,6 +52,7 @@ const columns: ColumnConfig<PacienteItem>[] = [
   { key: 'hierros', label: 'Hierros' },
   { key: 'eritropoyetina', label: 'Eritropoyetina' },
   { key: 'usos_restantes', label: 'Usos Rest.' },
+  { key: 'credito', label: 'Crédito' },
   { key: 'doctor', label: 'Doctor' },
   { key: 'acceso', label: 'Acceso' },
   { key: 'filtro', label: 'Filtro' },
@@ -81,6 +83,7 @@ function Pacientes() {
   const [nuevoHierros, setNuevoHierros] = useState('')
   const [nuevoEritropoyetina, setNuevoEritropoyetina] = useState('')
   const [nuevoUsosRestantes, setNuevoUsosRestantes] = useState('')
+  const [nuevoCredito, setNuevoCredito] = useState('')
   const [nuevoDoctorId, setNuevoDoctorId] = useState('')
   const [nuevoAccesoId, setNuevoAccesoId] = useState('')
   const [nuevoFiltroId, setNuevoFiltroId] = useState('')
@@ -129,6 +132,7 @@ function Pacientes() {
     setNuevoHierros('')
     setNuevoEritropoyetina('')
     setNuevoUsosRestantes('')
+    setNuevoCredito('')
     setNuevoDoctorId('')
     setNuevoAccesoId('')
     setNuevoFiltroId('')
@@ -149,11 +153,12 @@ function Pacientes() {
     }
 
     if (!validarEnteros([
-      ['No. expediente', nuevoExpediente],
       ['Hierros', nuevoHierros],
       ['Eritropoyetina', nuevoEritropoyetina],
       ['Usos restantes', nuevoUsosRestantes],
     ], mostrarMensaje, true)) return
+    if (!validarEnteros([['No. expediente', nuevoExpediente]], mostrarMensaje)) return
+    if (!validarFlotante([['Crédito', nuevoCredito]], mostrarMensaje, true)) return
 
     const body: Record<string, unknown> = { nombre }
     if (nuevoExpediente.trim()) body.no_expediente = parseInt(nuevoExpediente, 10)
@@ -161,6 +166,7 @@ function Pacientes() {
     if (nuevoHierros.trim()) body.hierros = parseInt(nuevoHierros, 10)
     if (nuevoEritropoyetina.trim()) body.eritropoyetina = parseInt(nuevoEritropoyetina, 10)
     if (nuevoUsosRestantes.trim()) body.usos_restantes = parseInt(nuevoUsosRestantes, 10)
+    body.credito = parseFloat(nuevoCredito)
     if (nuevoDoctorId) body.doctor_id = parseInt(nuevoDoctorId, 10)
     if (nuevoAccesoId) body.acceso_id = parseInt(nuevoAccesoId, 10)
     if (nuevoFiltroId) body.filtro_id = parseInt(nuevoFiltroId, 10)
@@ -260,6 +266,14 @@ function Pacientes() {
           placeholder="Usos restantes"
           value={nuevoUsosRestantes}
           onChange={e => setNuevoUsosRestantes(e.target.value)}
+          onKeyDown={e => { if (e.key === 'Enter') handleAdd() }}
+        />
+        <input
+          type="text"
+          inputMode="decimal"
+          placeholder="Crédito"
+          value={nuevoCredito}
+          onChange={e => setNuevoCredito(e.target.value)}
           onKeyDown={e => { if (e.key === 'Enter') handleAdd() }}
         />
         <select

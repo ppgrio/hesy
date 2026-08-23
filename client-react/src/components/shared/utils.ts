@@ -34,4 +34,18 @@ function validarEnteros(campos: [string, string][], error: (tipo: 'error' | 'exi
   return true
 }
 
-export { getMonday, formatFechaCompleta, normalizar, matchFilter, validarEnteros }
+function validarFlotante(campos: [string, string][], error: (tipo: 'error' | 'exito', msg: string) => void, obligatorio = false): boolean {
+  for (const [etiqueta, valor] of campos) {
+    if (obligatorio && !valor.trim()) {
+      error('error', `${etiqueta} es obligatorio`)
+      return false
+    }
+    if (valor.trim() && !/^-?\d+(\.\d+)?$/.test(valor.trim())) {
+      error('error', `${etiqueta} debe ser un número`)
+      return false
+    }
+  }
+  return true
+}
+
+export { getMonday, formatFechaCompleta, normalizar, matchFilter, validarEnteros, validarFlotante }

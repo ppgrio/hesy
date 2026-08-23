@@ -16,6 +16,7 @@ class Pacientes(db.Model):
     fecha_inicio_filtro = db.Column(db.Date)
     fecha_fin_filtro = db.Column(db.Date)
     usos_restantes = db.Column(db.Integer)
+    credito = db.Column(db.Float, nullable=False, default=0)
 
     #relaciones
     doctor = db.relationship('Doctores', backref = 'pacientes')

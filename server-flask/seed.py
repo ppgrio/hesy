@@ -132,6 +132,7 @@ def seed():
                 hierros=random.choice([random.randint(1, 6)]),
                 eritropoyetina=random.choice([random.randint(1, 8)]),
                 usos_restantes=random.choice([random.randint(1, 30)]),
+                credito=round(random.uniform(-500, 5000), 2),
                 acceso_id=random.choice(accesos).id,
                 doctor_id=random.choice(doctores).id,
                 observaciones=random.choice([None, 'FAV']),
