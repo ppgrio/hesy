@@ -15,12 +15,15 @@ sesion_bp = Blueprint('sesion', __name__)
 def sesion_to_dict(s):
     filtro_estado = s.filtro.estado if s.filtro else (s.paciente.filtro.estado if s.paciente and s.paciente.filtro else None)
     acceso_tipo = s.acceso.tipo if s.acceso else (s.paciente.acceso.tipo if s.paciente and s.paciente.acceso else None)
+    filtro_obj = s.filtro or (s.paciente.filtro if s.paciente else None)
     return {
         'id': s.id,
         'paciente_id': s.paciente_id,
         'paciente_nombre': s.paciente.nombre if s.paciente else None,
+        'paciente_no_expediente': s.paciente.no_expediente if s.paciente else None,
         'acceso': acceso_tipo,
         'filtro': filtro_estado,
+        'precio': float(filtro_obj.precio) if filtro_obj and filtro_obj.precio is not None else None,
         'fecha_hora': s.fecha_hora.isoformat() if s.fecha_hora else None,
     }
 
@@ -49,7 +52,21 @@ def get_sessions():
             return jsonify({'error': 'formato de hasta inválido'}), 400
 
     sesiones = query.order_by(Sesiones.fecha_hora.desc()).all()
-    return jsonify([sesion_to_dict(s) for s in sesiones])
+
+    usos = MedicamentosSesion.query.options(
+        joinedload(MedicamentosSesion.inventario_item)
+    ).filter(MedicamentosSesion.sesion_id.in_([s.id for s in sesiones])).all()
+    por_sesion = {}
+    for u in usos:
+        por_sesion.setdefault(u.sesion_id, []).append({
+            'nombre': u.inventario_item.nombre if u.inventario_item else None,
+            'cantidad': u.cantidad_usada,
+        })
+
+    data = [sesion_to_dict(s) for s in sesiones]
+    for d in data:
+        d['medicamentos'] = por_sesion.get(d['id'], [])
+    return jsonify(data)
 
 @sesion_bp.route('/api/session', methods=['POST'])
 def create_session():

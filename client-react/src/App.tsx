@@ -4,6 +4,7 @@ import Pacientes from './components/Pacientes'
 import Sesiones from './components/Sesiones'
 import Calendario from './components/Calendario'
 import Inventario from './components/Inventario'
+import Pagos from './components/Pagos'
 import Admin from './components/Admin'
 import './App.css'
 
@@ -16,6 +17,7 @@ function App() {
         <Route path="/sesiones" element={<Sesiones />} />
         <Route path="/calendario" element={<Calendario />} />
         <Route path="/inventario" element={<Inventario />} />
+        <Route path="/pagos" element={<Pagos />} />
         <Route path="/admin" element={<Admin />} />
         <Route path="/doctores" element={<Navigate to="/admin" replace />} />
         <Route path="*" element={<Navigate to="/pacientes" replace />} />
