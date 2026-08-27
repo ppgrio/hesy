@@ -108,6 +108,7 @@ def seed():
                 codigo=5000000 + i,
                 nombre=nombre,
                 cantidad=random.randint(10, 20000),
+                precio=round(random.uniform(5, 250), 2),
                 caducidad=date(2026, 7, 1) + timedelta(days=random.randint(0, 180)),
                 area_id=random.choice(areas).id,
             ))
@@ -152,8 +153,8 @@ def seed():
         pacientes_ids = [p.id for p in Pacientes.query.all()]
 
         print('Sembrando sesiones (30-50/día)...')
-        start_date = date(2025, 1, 1)
-        end_date = date(2026, 7, 28)
+        end_date = date.today()
+        start_date = end_date - timedelta(days=30)
         all_dates = [start_date + timedelta(days=i) for i in range((end_date - start_date).days + 1)]
 
         total_sesiones = 0

@@ -56,6 +56,12 @@
   color: var(--text-h);
 }
 
+.modal-item-precio {
+  font-size: 13px;
+  color: var(--text);
+  font-weight: 500;
+}
+
 .modal-item-quitar {
   background: none;
   border: 1px solid #e74c3c;
@@ -185,5 +191,31 @@
       border-color: var(--accent);
       box-shadow: 0 0 0 2px var(--accent-bg);
     }
+  }
+}
+
+.modal-total {
+  border-top: 1px solid var(--border);
+  padding: 12px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+
+  .modal-total-fila {
+    display: flex;
+    justify-content: space-between;
+    font-size: 14px;
+    color: var(--text);
+
+    b {
+      color: var(--text-h);
+    }
+  }
+
+  .modal-total-grande {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text-h);
+    padding-top: 4px;
   }
 }

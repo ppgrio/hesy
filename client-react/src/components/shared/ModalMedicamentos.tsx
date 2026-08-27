@@ -12,6 +12,7 @@ interface InventarioItem {
   id: number
   nombre: string
   cantidad: number
+  precio: number | null
 }
 
 interface MedicamentoUso {
@@ -19,6 +20,7 @@ interface MedicamentoUso {
   inventario_id: number
   nombre: string | null
   cantidad_usada: number
+  precio: number | null
   stock_disponible: number
 }
 
@@ -34,12 +36,19 @@ interface Props {
   onClose: () => void
   onAgregarMedicamento: (item: InventarioItem) => void
   onQuitarMedicamento: (uso: MedicamentoUso) => void
+  precioBase?: number | null
+}
+
+function fmtPrecio(p: number | null | undefined): string {
+  if (p == null) return ''
+  return `$${p.toFixed(2)}`
 }
 
 function ModalMedicamentos({
   session, medicamentos, inventarioItems,
   busqueda, onBusquedaChange, cantidad, onCantidadChange,
   cargando, onClose, onAgregarMedicamento, onQuitarMedicamento,
+  precioBase = null,
 }: Props) {
   const resultadosBusqueda = useMemo(() => {
     if (!busqueda.trim()) return []
@@ -48,6 +57,12 @@ function ModalMedicamentos({
       i.cantidad > 0 && normalizar(i.nombre).includes(q)
     )
   }, [busqueda, inventarioItems])
+
+  const totalMedicamentos = medicamentos.reduce(
+    (acc, u) => acc + ((u.precio ?? 0) * u.cantidad_usada),
+    0
+  )
+  const totalSesion = (precioBase ?? 0) + totalMedicamentos
 
   if (!session) return null
 
@@ -78,6 +93,9 @@ function ModalMedicamentos({
                   <div key={u.id} className="modal-item">
                     <span className="modal-item-nombre">{u.nombre || '—'}</span>
                     <span className="modal-item-cantidad">{u.cantidad_usada}</span>
+                    <span className="modal-item-precio">
+                      {u.precio != null ? `$${(u.precio * u.cantidad_usada).toFixed(2)}` : '—'}
+                    </span>
                     <button className="modal-item-quitar" onClick={() => onQuitarMedicamento(u)}>Quitar</button>
                   </div>
                 ))
@@ -104,7 +122,7 @@ function ModalMedicamentos({
                             onClick={() => { onCantidadChange(1); onAgregarMedicamento(item) }}
                           >
                             <span className="modal-resultado-nombre">{item.nombre}</span>
-                            <span className="modal-resultado-stock">{item.cantidad} disp.</span>
+                            <span className="modal-resultado-stock">{fmtPrecio(item.precio)} · {item.cantidad} disp.</span>
                           </button>
                         ))
                       ) : (
@@ -123,6 +141,22 @@ function ModalMedicamentos({
                   />
                 </div>
               </div>
+            </div>
+
+            <div className="modal-total">
+              {precioBase != null && (
+                <span className="modal-total-fila">
+                  Consulta: <b>{fmtPrecio(precioBase)}</b>
+                </span>
+              )}
+              {totalMedicamentos > 0 && (
+                <span className="modal-total-fila">
+                  Medicamentos: <b>{fmtPrecio(totalMedicamentos)}</b>
+                </span>
+              )}
+              <span className="modal-total-fila modal-total-grande">
+                Total de la sesión: <b>{fmtPrecio(totalSesion)}</b>
+              </span>
             </div>
           </>
         )}

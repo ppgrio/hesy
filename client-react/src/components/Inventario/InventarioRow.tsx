@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { validarEnteros } from '../shared/utils'
+import { validarEnteros, validarFlotante } from '../shared/utils'
 
 interface Area {
   id: number
@@ -11,6 +11,7 @@ interface InventarioItem {
   codigo: number | null
   nombre: string
   cantidad: number
+  precio: number | null
   caducidad: string | null
   area_id: number | null
   area: string | null
@@ -29,6 +30,7 @@ function InventarioRow({ item, areas, onUpdated, onDeleted, mostrarMensaje }: Pr
   const [editCodigo, setEditCodigo] = useState('')
   const [editNombre, setEditNombre] = useState('')
   const [editCantidad, setEditCantidad] = useState('')
+  const [editPrecio, setEditPrecio] = useState('')
   const [editCaducidad, setEditCaducidad] = useState('')
   const [editAreaId, setEditAreaId] = useState('')
 
@@ -37,6 +39,7 @@ function InventarioRow({ item, areas, onUpdated, onDeleted, mostrarMensaje }: Pr
     setEditCodigo(item.codigo != null ? String(item.codigo) : '')
     setEditNombre(item.nombre)
     setEditCantidad(String(item.cantidad))
+    setEditPrecio(item.precio != null ? String(item.precio) : '')
     setEditCaducidad(item.caducidad ?? '')
     setEditAreaId(item.area_id ? String(item.area_id) : '')
   }
@@ -65,8 +68,13 @@ function InventarioRow({ item, areas, onUpdated, onDeleted, mostrarMensaje }: Pr
       return
     }
     if (!validarEnteros([['Código', editCodigo]], mostrarMensaje)) return
+    if (!validarFlotante([['Precio', editPrecio]], mostrarMensaje, true)) return
+    if (Number(editPrecio) < 0) {
+      mostrarMensaje('error', 'El precio no puede ser negativo')
+      return
+    }
 
-    const body: Record<string, unknown> = { nombre, cantidad }
+    const body: Record<string, unknown> = { nombre, cantidad, precio: Number(editPrecio) }
     if (editCodigo.trim()) body.codigo = parseInt(editCodigo, 10)
     else body.codigo = null
     if (editCaducidad) body.caducidad = editCaducidad
@@ -154,6 +162,16 @@ function InventarioRow({ item, areas, onUpdated, onDeleted, mostrarMensaje }: Pr
           </td>
           <td>
             <input
+              type="text"
+              inputMode="decimal"
+              value={editPrecio}
+              onChange={e => setEditPrecio(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter') guardarEdicion(); if (e.key === 'Escape') cancelarEdicion() }}
+              className="input-editar"
+            />
+          </td>
+          <td>
+            <input
               type="date"
               value={editCaducidad}
               onChange={e => setEditCaducidad(e.target.value)}
@@ -177,6 +195,7 @@ function InventarioRow({ item, areas, onUpdated, onDeleted, mostrarMensaje }: Pr
         <>
           <td>{item.nombre}</td>
           <td>{item.cantidad}</td>
+          <td>{item.precio != null ? `$${item.precio.toFixed(2)}` : '—'}</td>
           <td>{formatDate(item.caducidad)}</td>
           <td>{item.area ?? '—'}</td>
         </>

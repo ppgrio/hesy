@@ -5,7 +5,7 @@ import CrudModal from '../shared/CrudModal'
 import CrudTableHead from '../shared/CrudTableHead'
 import useSortFilter from '../shared/useSortFilter'
 import type { ColumnConfig } from '../shared/useSortFilter'
-import { validarEnteros } from '../shared/utils'
+import { validarEnteros, validarFlotante } from '../shared/utils'
 import Paginacion from '../shared/Paginacion'
 import InventarioRow from './InventarioRow'
 import '../shared/crud.css'
@@ -20,6 +20,7 @@ interface InventarioItem {
   codigo: number | null
   nombre: string
   cantidad: number
+  precio: number | null
   caducidad: string | null
   area_id: number | null
   area: string | null
@@ -29,6 +30,7 @@ const columns: ColumnConfig<InventarioItem>[] = [
   { key: 'codigo', label: 'Código' },
   { key: 'nombre', label: 'Nombre' },
   { key: 'cantidad', label: 'Cantidad' },
+  { key: 'precio', label: 'Precio' },
   { key: 'caducidad', label: 'Caducidad' },
   { key: 'area', label: 'Área' },
 ]
@@ -43,6 +45,7 @@ function Inventario() {
   const [nuevoCodigo, setNuevoCodigo] = useState('')
   const [nuevoNombre, setNuevoNombre] = useState('')
   const [nuevaCantidad, setNuevaCantidad] = useState('')
+  const [nuevoPrecio, setNuevoPrecio] = useState('')
   const [nuevaCaducidad, setNuevaCaducidad] = useState('')
   const [nuevaAreaId, setNuevaAreaId] = useState('')
   const { mensaje, mostrarMensaje } = useMensaje(4000)
@@ -82,6 +85,7 @@ function Inventario() {
     setNuevoCodigo('')
     setNuevoNombre('')
     setNuevaCantidad('')
+    setNuevoPrecio('')
     setNuevaCaducidad('')
     setNuevaAreaId('')
   }
@@ -106,8 +110,13 @@ function Inventario() {
       return
     }
     if (!validarEnteros([['Código', nuevoCodigo]], mostrarMensaje)) return
+    if (!validarFlotante([['Precio', nuevoPrecio]], mostrarMensaje, true)) return
+    if (Number(nuevoPrecio) < 0) {
+      mostrarMensaje('error', 'El precio no puede ser negativo')
+      return
+    }
 
-    const body: Record<string, unknown> = { nombre, cantidad }
+    const body: Record<string, unknown> = { nombre, cantidad, precio: Number(nuevoPrecio) }
     if (nuevoCodigo.trim()) body.codigo = parseInt(nuevoCodigo, 10)
     if (nuevaCaducidad) body.caducidad = nuevaCaducidad
     if (nuevaAreaId) body.area_id = parseInt(nuevaAreaId, 10)
@@ -183,6 +192,14 @@ function Inventario() {
           onChange={e => setNuevaCantidad(e.target.value)}
           onKeyDown={e => { if (e.key === 'Enter') handleAdd() }}
           min="0"
+        />
+        <input
+          type="text"
+          inputMode="decimal"
+          placeholder="Precio"
+          value={nuevoPrecio}
+          onChange={e => setNuevoPrecio(e.target.value)}
+          onKeyDown={e => { if (e.key === 'Enter') handleAdd() }}
         />
         <input
           type="date"

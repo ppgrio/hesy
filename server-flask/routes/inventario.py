@@ -14,10 +14,21 @@ def serializar(i):
         'codigo': i.codigo,
         'nombre': i.nombre,
         'cantidad': i.cantidad,
+        'precio': float(i.precio) if i.precio is not None else None,
         'caducidad': i.caducidad.isoformat() if i.caducidad else None,
         'area_id': i.area_id,
         'area': i.area.nombre if i.area else None,
     }
+
+
+def leer_precio(data):
+    try:
+        precio = float(data.get('precio'))
+    except (TypeError, ValueError):
+        return None, 'El precio es obligatorio y debe ser un número'
+    if precio < 0:
+        return None, 'El precio no puede ser negativo'
+    return precio, None
 
 
 @inventario_bp.route('/api/inventario')
@@ -30,7 +41,7 @@ def get_inventario():
     dir_ = 'desc' if request.args.get('dir', 'asc') == 'desc' else 'asc'
 
     q = Inventario.query.join(Areas, Inventario.area_id == Areas.id, isouter=True)
-    for key in ('codigo', 'nombre', 'cantidad', 'caducidad', 'area'):
+    for key in ('codigo', 'nombre', 'cantidad', 'precio', 'caducidad', 'area'):
         v = request.args.get(key, '').strip()
         if not v:
             continue
@@ -38,6 +49,11 @@ def get_inventario():
         if key in ('codigo', 'cantidad'):
             try:
                 q = q.filter(col == int(v))
+            except ValueError:
+                pass
+        elif key == 'precio':
+            try:
+                q = q.filter(col == float(v))
             except ValueError:
                 pass
         else:
@@ -75,6 +91,10 @@ def create_inventario():
     if cantidad < 0:
         return jsonify({'error': 'La cantidad no puede ser negativa'}), 400
 
+    precio, err = leer_precio(data)
+    if err:
+        return jsonify({'error': err}), 400
+
     caducidad = data.get('caducidad')
     if caducidad:
         from datetime import date as dt_date
@@ -100,6 +120,7 @@ def create_inventario():
         codigo=codigo,
         nombre=nombre,
         cantidad=cantidad,
+        precio=precio,
         caducidad=caducidad,
         area_id=area_id,
     )
@@ -139,6 +160,10 @@ def update_inventario(id):
     if cantidad < 0:
         return jsonify({'error': 'La cantidad no puede ser negativa'}), 400
 
+    precio, err = leer_precio(data)
+    if err:
+        return jsonify({'error': err}), 400
+
     caducidad = data.get('caducidad')
     if caducidad:
         from datetime import date as dt_date
@@ -156,6 +181,7 @@ def update_inventario(id):
     item.codigo = codigo
     item.nombre = nombre
     item.cantidad = cantidad
+    item.precio = precio
     item.caducidad = caducidad
     item.area_id = area_id
 

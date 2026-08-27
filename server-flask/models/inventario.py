@@ -8,6 +8,7 @@ class Inventario(db.Model):
     codigo = db.Column(db.Integer, unique=True, nullable=True)
     nombre = db.Column(db.String(100), nullable=False)
     cantidad = db.Column(db.Integer, nullable = False)
+    precio = db.Column(db.Numeric(10, 2), nullable=False, default=0)
     caducidad = db.Column(db.Date)
     area_id = db.Column(db.Integer, db.ForeignKey('areas.id'))
 

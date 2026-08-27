@@ -61,6 +61,7 @@ def get_sessions():
         por_sesion.setdefault(u.sesion_id, []).append({
             'nombre': u.inventario_item.nombre if u.inventario_item else None,
             'cantidad': u.cantidad_usada,
+            'precio': float(u.inventario_item.precio) if u.inventario_item and u.inventario_item.precio is not None else None,
         })
 
     data = [sesion_to_dict(s) for s in sesiones]
@@ -180,6 +181,7 @@ def get_medicamentos_sesion(sesion_id):
         'inventario_id': u.inventario_id,
         'nombre': u.inventario_item.nombre if u.inventario_item else None,
         'cantidad_usada': u.cantidad_usada,
+        'precio': float(u.inventario_item.precio) if u.inventario_item and u.inventario_item.precio is not None else None,
         'stock_disponible': u.inventario_item.cantidad if u.inventario_item else 0,
     } for u in usos])
 
@@ -213,6 +215,7 @@ def add_medicamento_sesion(sesion_id):
             'inventario_id': uso.inventario_id,
             'nombre': uso.inventario_item.nombre if uso.inventario_item else None,
             'cantidad_usada': uso.cantidad_usada,
+            'precio': float(uso.inventario_item.precio) if uso.inventario_item and uso.inventario_item.precio is not None else None,
             'stock_disponible': uso.inventario_item.cantidad if uso.inventario_item else 0,
         }), 201
     except IntegrityError:

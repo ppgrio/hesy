@@ -12,13 +12,14 @@ interface SesionPago {
   filtro: string | null
   precio: number | null
   fecha_hora: string | null
-  medicamentos: { nombre: string | null; cantidad: number }[]
+  medicamentos: { nombre: string | null; cantidad: number; precio: number | null }[]
 }
 
 interface InventarioItem {
   id: number
   nombre: string
   cantidad: number
+  precio: number | null
 }
 
 interface MedicamentoUso {
@@ -26,12 +27,22 @@ interface MedicamentoUso {
   inventario_id: number
   nombre: string | null
   cantidad_usada: number
+  precio: number | null
   stock_disponible: number
 }
 
 function fmtMedicamentos(meds: { nombre: string | null; cantidad: number }[]): string {
   if (meds.length === 0) return '—'
   return meds.map(m => `${m.nombre ?? '—'} x${m.cantidad}`).join(', ')
+}
+
+function costoSesion(s: SesionPago): number {
+  const base = s.precio ?? 0
+  const meds = (s.medicamentos ?? []).reduce(
+    (acc, m) => acc + ((m.precio ?? 0) * m.cantidad),
+    0
+  )
+  return base + meds
 }
 
 function hoyLocal(): string {
@@ -172,12 +183,13 @@ function Pagos() {
                 <th>Filtro</th>
                 <th>Precio</th>
                 <th>Medicamentos</th>
+                <th>Costo</th>
               </tr>
             </thead>
             <tbody>
               {sesiones.length === 0 ? (
                 <tr>
-                  <td colSpan={6} style={{ textAlign: 'center', padding: '24px 0' }}>
+                  <td colSpan={7} style={{ textAlign: 'center', padding: '24px 0' }}>
                     Sin sesiones hoy.
                   </td>
                 </tr>
@@ -190,6 +202,7 @@ function Pagos() {
                     <td>{s.filtro ?? '—'}</td>
                     <td>{s.precio != null ? `$${s.precio.toFixed(2)}` : '—'}</td>
                     <td>{fmtMedicamentos(s.medicamentos ?? [])}</td>
+                    <td><b>${costoSesion(s).toFixed(2)}</b></td>
                   </tr>
                 ))
               )}
@@ -210,6 +223,7 @@ function Pagos() {
         onClose={cerrarModalMedicamentos}
         onAgregarMedicamento={agregarMedicamento}
         onQuitarMedicamento={quitarMedicamento}
+        precioBase={sessionSeleccionada?.precio ?? null}
       />
     </section>
   )
