@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { formatFechaCompleta } from '../shared/utils'
 import { useMensaje } from '../shared/hooks'
 import MensajeToast from '../shared/MensajeToast'
@@ -13,7 +13,7 @@ interface SesionPago {
   filtro: string | null
   precio: number | null
   fecha_hora: string | null
-  medicamentos: { nombre: string | null; cantidad: number; precio: number | null }[]
+  medicamentos: { id: number; nombre: string | null; cantidad: number; precio: number | null }[]
   pagado: boolean
 }
 
@@ -66,10 +66,19 @@ function Pagos() {
 
   const [sessionSeleccionada, setSessionSeleccionada] = useState<SesionPago | null>(null)
   const [medicamentos, setMedicamentos] = useState<MedicamentoUso[]>([])
-  const [inventarioItems, setInventarioItems] = useState<InventarioItem[]>([])
-  const [busqueda, setBusqueda] = useState('')
   const [cantidad, setCantidad] = useState(1)
   const [cargando, setCargando] = useState(false)
+
+  const buscarMedicamentos = useCallback((q: string) => {
+    if (!q.trim()) return Promise.resolve([] as InventarioItem[])
+    const params = new URLSearchParams({ page: '1', page_size: '10', nombre: q })
+    return fetch(`/api/inventario?${params}`)
+      .then(async res => {
+        if (!res.ok) throw new Error('Error al buscar medicamentos')
+        return res.json()
+      })
+      .then(data => data.items as InventarioItem[])
+  }, [])
 
   useEffect(() => {
     setLoading(true)
@@ -92,16 +101,15 @@ function Pagos() {
   function abrirModalMedicamentos(s: SesionPago) {
     setSessionSeleccionada(s)
     setMedicamentos([])
-    setBusqueda('')
     setCantidad(1)
     setCargando(true)
-    Promise.all([
-      fetch(`/api/session/${s.id}/medicamentos`).then(r => r.json()),
-      fetch('/api/inventario').then(r => r.json()),
-    ])
-      .then(([medicamentosData, inventario]) => {
+    fetch(`/api/session/${s.id}/medicamentos`)
+      .then(async res => {
+        if (!res.ok) throw new Error('Error al cargar medicamentos')
+        return res.json()
+      })
+      .then((medicamentosData: MedicamentoUso[]) => {
         setMedicamentos(medicamentosData)
-        setInventarioItems(inventario)
         setCargando(false)
       })
       .catch(() => {
@@ -113,8 +121,6 @@ function Pagos() {
   function cerrarModalMedicamentos() {
     setSessionSeleccionada(null)
     setMedicamentos([])
-    setInventarioItems([])
-    setBusqueda('')
     setCantidad(1)
   }
 
@@ -138,10 +144,19 @@ function Pagos() {
       })
       .then(nuevoUso => {
         setMedicamentos(prev => [...prev, nuevoUso])
-        setInventarioItems(prev => prev.map(i =>
-          i.id === item.id ? { ...i, cantidad: i.cantidad - cantidad } : i
-        ))
-        setBusqueda('')
+        if (sessionSeleccionada) {
+          setSesiones(prev => prev.map(ses =>
+            ses.id === sessionSeleccionada.id
+              ? {
+                  ...ses,
+                  medicamentos: [
+                    ...(ses.medicamentos ?? []),
+                    { id: nuevoUso.id, nombre: nuevoUso.nombre, cantidad: nuevoUso.cantidad_usada, precio: nuevoUso.precio },
+                  ],
+                }
+              : ses
+          ))
+        }
         setCantidad(1)
         mostrarMensaje('exito', `${item.nombre} agregado a la sesión`)
       })
@@ -154,9 +169,13 @@ function Pagos() {
       .then(async res => {
         if (!res.ok) throw new Error('Error al quitar medicamento')
         setMedicamentos(prev => prev.filter(m => m.id !== uso.id))
-        setInventarioItems(prev => prev.map(i =>
-          i.id === uso.inventario_id ? { ...i, cantidad: i.cantidad + uso.cantidad_usada } : i
-        ))
+        if (sessionSeleccionada) {
+          setSesiones(prev => prev.map(ses =>
+            ses.id === sessionSeleccionada.id
+              ? { ...ses, medicamentos: (ses.medicamentos ?? []).filter(m => m.id !== uso.id) }
+              : ses
+          ))
+        }
         mostrarMensaje('exito', `${uso.nombre} quitado de la sesión`)
       })
       .catch(err => mostrarMensaje('error', err.message))
@@ -247,9 +266,6 @@ function Pagos() {
       <ModalMedicamentos
         session={sessionSeleccionada}
         medicamentos={medicamentos}
-        inventarioItems={inventarioItems}
-        busqueda={busqueda}
-        onBusquedaChange={setBusqueda}
         cantidad={cantidad}
         onCantidadChange={setCantidad}
         cargando={cargando}
@@ -257,6 +273,7 @@ function Pagos() {
         onAgregarMedicamento={agregarMedicamento}
         onQuitarMedicamento={quitarMedicamento}
         precioBase={sessionSeleccionada?.precio ?? null}
+        buscarMedicamentos={buscarMedicamentos}
       />
     </section>
   )

@@ -1,5 +1,4 @@
-import { useMemo } from 'react'
-import { normalizar } from './utils'
+import { useEffect, useState } from 'react'
 import './ModalMedicamentos.css'
 
 interface SessionMinima {
@@ -27,9 +26,6 @@ interface MedicamentoUso {
 interface Props {
   session: SessionMinima | null
   medicamentos: MedicamentoUso[]
-  inventarioItems: InventarioItem[]
-  busqueda: string
-  onBusquedaChange: (t: string) => void
   cantidad: number
   onCantidadChange: (n: number) => void
   cargando: boolean
@@ -37,6 +33,7 @@ interface Props {
   onAgregarMedicamento: (item: InventarioItem) => void
   onQuitarMedicamento: (uso: MedicamentoUso) => void
   precioBase?: number | null
+  buscarMedicamentos: (q: string) => Promise<InventarioItem[]>
 }
 
 function fmtPrecio(p: number | null | undefined): string {
@@ -45,18 +42,37 @@ function fmtPrecio(p: number | null | undefined): string {
 }
 
 function ModalMedicamentos({
-  session, medicamentos, inventarioItems,
-  busqueda, onBusquedaChange, cantidad, onCantidadChange,
+  session, medicamentos, cantidad, onCantidadChange,
   cargando, onClose, onAgregarMedicamento, onQuitarMedicamento,
-  precioBase = null,
+  precioBase = null, buscarMedicamentos,
 }: Props) {
-  const resultadosBusqueda = useMemo(() => {
-    if (!busqueda.trim()) return []
-    const q = normalizar(busqueda)
-    return inventarioItems.filter(i =>
-      i.cantidad > 0 && normalizar(i.nombre).includes(q)
-    )
-  }, [busqueda, inventarioItems])
+  const [busqueda, setBusqueda] = useState('')
+  const [resultados, setResultados] = useState<InventarioItem[]>([])
+  const [buscando, setBuscando] = useState(false)
+
+  useEffect(() => {
+    setBusqueda('')
+    setResultados([])
+    setBuscando(false)
+  }, [session?.id])
+
+  useEffect(() => {
+    const q = busqueda.trim()
+    if (!q) {
+      setResultados([])
+      setBuscando(false)
+      return
+    }
+    let activo = true
+    setBuscando(true)
+    const timer = setTimeout(() => {
+      buscarMedicamentos(q)
+        .then(items => { if (activo) setResultados(items) })
+        .catch(() => { if (activo) setResultados([]) })
+        .finally(() => { if (activo) setBuscando(false) })
+    }, 250)
+    return () => { activo = false; clearTimeout(timer) }
+  }, [busqueda, buscarMedicamentos])
 
   const totalMedicamentos = medicamentos.reduce(
     (acc, u) => acc + ((u.precio ?? 0) * u.cantidad_usada),
@@ -110,12 +126,14 @@ function ModalMedicamentos({
                     type="text"
                     placeholder="Buscar medicamento..."
                     value={busqueda}
-                    onChange={e => onBusquedaChange(e.target.value)}
+                    onChange={e => setBusqueda(e.target.value)}
                   />
-                  {busqueda && (
+                  {busqueda.trim() && (
                     <div className="modal-resultados">
-                      {resultadosBusqueda.length > 0 ? (
-                        resultadosBusqueda.slice(0, 10).map(item => (
+                      {buscando ? (
+                        <div className="modal-resultados-vacio">Buscando...</div>
+                      ) : resultados.length > 0 ? (
+                        resultados.map(item => (
                           <button
                             key={item.id}
                             className="modal-resultado-item"

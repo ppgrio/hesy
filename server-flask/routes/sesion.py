@@ -60,6 +60,7 @@ def get_sessions():
     por_sesion = {}
     for u in usos:
         por_sesion.setdefault(u.sesion_id, []).append({
+            'id': u.id,
             'nombre': u.inventario_item.nombre if u.inventario_item else None,
             'cantidad': u.cantidad_usada,
             'precio': float(u.inventario_item.precio) if u.inventario_item and u.inventario_item.precio is not None else None,
