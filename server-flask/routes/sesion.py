@@ -25,6 +25,7 @@ def sesion_to_dict(s):
         'filtro': filtro_estado,
         'precio': float(filtro_obj.precio) if filtro_obj and filtro_obj.precio is not None else None,
         'fecha_hora': s.fecha_hora.isoformat() if s.fecha_hora else None,
+        'pagado': bool(s.pagado),
     }
 
 @sesion_bp.route('/api/session')
@@ -104,11 +105,16 @@ def create_session():
             return jsonify({'error': f'Acceso "{tipo_de_acceso}" no válido'}), 400
         acceso_id = acceso.id
 
+    pagado = data.get('pagado')
+    if pagado is not None and not isinstance(pagado, bool):
+        return jsonify({'error': 'pagado debe ser un booleano'}), 400
+
     sesion = Sesiones(
         paciente_id=paciente_id,
         fecha_hora=fecha_hora,
         filtro_sesion=filtro_id,
         acceso_sesion=acceso_id,
+        pagado=bool(pagado) if pagado is not None else False,
     )
     db.session.add(sesion)
     db.session.commit()
@@ -158,6 +164,11 @@ def update_session(id):
             if not acceso:
                 return jsonify({'error': f'Acceso "{tipo_de_acceso}" no válido'}), 400
             sesion.acceso_sesion = acceso.id
+
+    if 'pagado' in data:
+        if not isinstance(data['pagado'], bool):
+            return jsonify({'error': 'pagado debe ser un booleano'}), 400
+        sesion.pagado = data['pagado']
 
     db.session.commit()
     return jsonify(sesion_to_dict(sesion))

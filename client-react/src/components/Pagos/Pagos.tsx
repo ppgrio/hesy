@@ -4,6 +4,7 @@ import { useMensaje } from '../shared/hooks'
 import MensajeToast from '../shared/MensajeToast'
 import ModalMedicamentos from '../shared/ModalMedicamentos'
 import '../shared/crud.css'
+import './Pagos.css'
 
 interface SesionPago {
   id: number
@@ -13,6 +14,7 @@ interface SesionPago {
   precio: number | null
   fecha_hora: string | null
   medicamentos: { nombre: string | null; cantidad: number; precio: number | null }[]
+  pagado: boolean
 }
 
 interface InventarioItem {
@@ -160,6 +162,27 @@ function Pagos() {
       .catch(err => mostrarMensaje('error', err.message))
   }
 
+  function togglePago(s: SesionPago) {
+    const nuevo = !s.pagado
+    fetch(`/api/session/${s.id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ pagado: nuevo }),
+    })
+      .then(async res => {
+        if (!res.ok) {
+          const err = await res.json()
+          throw new Error(err.error || 'Error al actualizar el estado')
+        }
+        return res.json()
+      })
+      .then(updated => {
+        setSesiones(prev => prev.map(x => (x.id === updated.id ? { ...x, pagado: updated.pagado } : x)))
+        mostrarMensaje('exito', `Sesión marcada como ${nuevo ? 'pagada' : 'pendiente'}`)
+      })
+      .catch(err => mostrarMensaje('error', err.message))
+  }
+
   return (
     <section id="patients-page">
       <div className="inventario-header">
@@ -184,12 +207,13 @@ function Pagos() {
                 <th>Precio</th>
                 <th>Medicamentos</th>
                 <th>Costo</th>
+                <th>Estado</th>
               </tr>
             </thead>
             <tbody>
               {sesiones.length === 0 ? (
                 <tr>
-                  <td colSpan={7} style={{ textAlign: 'center', padding: '24px 0' }}>
+                  <td colSpan={8} style={{ textAlign: 'center', padding: '24px 0' }}>
                     Sin sesiones hoy.
                   </td>
                 </tr>
@@ -203,6 +227,15 @@ function Pagos() {
                     <td>{s.precio != null ? `$${s.precio.toFixed(2)}` : '—'}</td>
                     <td>{fmtMedicamentos(s.medicamentos ?? [])}</td>
                     <td><b>${costoSesion(s).toFixed(2)}</b></td>
+                    <td onClick={e => e.stopPropagation()}>
+                      <button
+                        className={`estado-badge ${s.pagado ? 'estado-pagado' : 'estado-pendiente'}`}
+                        onClick={e => { e.stopPropagation(); togglePago(s) }}
+                        title={s.pagado ? 'Marcar como pendiente' : 'Marcar como pagada'}
+                      >
+                        {s.pagado ? 'Pagado' : 'Pendiente'}
+                      </button>
+                    </td>
                   </tr>
                 ))
               )}

@@ -1,0 +1,24 @@
+.estado-badge {
+  border: none;
+  background: none;
+  padding: 4px 0;
+  font: 13px var(--sans);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.estado-pagado {
+  color: #2e7d32;
+
+  &:hover {
+    color: #1b5e20;
+  }
+}
+
+.estado-pendiente {
+  color: #e65100;
+
+  &:hover {
+    color: #bf360c;
+  }
+}

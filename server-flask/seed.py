@@ -174,6 +174,7 @@ def seed():
                 sesion = Sesiones(
                     paciente_id=random.choice(pacientes_ids),
                     fecha_hora=dt,
+                    pagado=random.choice([True, False]),
                 )
                 db.session.add(sesion)
                 total_sesiones += 1
