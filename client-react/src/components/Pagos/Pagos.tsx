@@ -1,5 +1,9 @@
 import { useState, useEffect } from 'react'
 import { formatFechaCompleta } from '../shared/utils'
+import { useMensaje } from '../shared/hooks'
+import MensajeToast from '../shared/MensajeToast'
+import ModalMedicamentos from '../shared/ModalMedicamentos'
+import '../shared/crud.css'
 
 interface SesionPago {
   id: number
@@ -9,6 +13,20 @@ interface SesionPago {
   precio: number | null
   fecha_hora: string | null
   medicamentos: { nombre: string | null; cantidad: number }[]
+}
+
+interface InventarioItem {
+  id: number
+  nombre: string
+  cantidad: number
+}
+
+interface MedicamentoUso {
+  id: number
+  inventario_id: number
+  nombre: string | null
+  cantidad_usada: number
+  stock_disponible: number
 }
 
 function fmtMedicamentos(meds: { nombre: string | null; cantidad: number }[]): string {
@@ -31,6 +49,14 @@ function Pagos() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const hoy = useState(hoyLocal)[0]
+  const { mensaje, mostrarMensaje } = useMensaje(3000)
+
+  const [sessionSeleccionada, setSessionSeleccionada] = useState<SesionPago | null>(null)
+  const [medicamentos, setMedicamentos] = useState<MedicamentoUso[]>([])
+  const [inventarioItems, setInventarioItems] = useState<InventarioItem[]>([])
+  const [busqueda, setBusqueda] = useState('')
+  const [cantidad, setCantidad] = useState(1)
+  const [cargando, setCargando] = useState(false)
 
   useEffect(() => {
     setLoading(true)
@@ -50,12 +76,87 @@ function Pagos() {
       })
   }, [hoy])
 
+  function abrirModalMedicamentos(s: SesionPago) {
+    setSessionSeleccionada(s)
+    setMedicamentos([])
+    setBusqueda('')
+    setCantidad(1)
+    setCargando(true)
+    Promise.all([
+      fetch(`/api/session/${s.id}/medicamentos`).then(r => r.json()),
+      fetch('/api/inventario').then(r => r.json()),
+    ])
+      .then(([medicamentosData, inventario]) => {
+        setMedicamentos(medicamentosData)
+        setInventarioItems(inventario)
+        setCargando(false)
+      })
+      .catch(() => {
+        mostrarMensaje('error', 'Error al cargar medicamentos')
+        setCargando(false)
+      })
+  }
+
+  function cerrarModalMedicamentos() {
+    setSessionSeleccionada(null)
+    setMedicamentos([])
+    setInventarioItems([])
+    setBusqueda('')
+    setCantidad(1)
+  }
+
+  function agregarMedicamento(item: InventarioItem) {
+    if (!sessionSeleccionada || cantidad < 1) return
+    if (cantidad > item.cantidad) {
+      mostrarMensaje('error', `Stock insuficiente de ${item.nombre}. Disponible: ${item.cantidad}`)
+      return
+    }
+    fetch(`/api/session/${sessionSeleccionada.id}/medicamentos`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ inventario_id: item.id, cantidad_usada: cantidad }),
+    })
+      .then(async res => {
+        if (!res.ok) {
+          const err = await res.json()
+          throw new Error(err.error || 'Error al agregar medicamento')
+        }
+        return res.json()
+      })
+      .then(nuevoUso => {
+        setMedicamentos(prev => [...prev, nuevoUso])
+        setInventarioItems(prev => prev.map(i =>
+          i.id === item.id ? { ...i, cantidad: i.cantidad - cantidad } : i
+        ))
+        setBusqueda('')
+        setCantidad(1)
+        mostrarMensaje('exito', `${item.nombre} agregado a la sesión`)
+      })
+      .catch(err => mostrarMensaje('error', err.message))
+  }
+
+  function quitarMedicamento(uso: MedicamentoUso) {
+    if (!confirm(`¿Quitar ${uso.nombre} (${uso.cantidad_usada}) de la sesión?`)) return
+    fetch(`/api/medicamento-sesion/${uso.id}`, { method: 'DELETE' })
+      .then(async res => {
+        if (!res.ok) throw new Error('Error al quitar medicamento')
+        setMedicamentos(prev => prev.filter(m => m.id !== uso.id))
+        setInventarioItems(prev => prev.map(i =>
+          i.id === uso.inventario_id ? { ...i, cantidad: i.cantidad + uso.cantidad_usada } : i
+        ))
+        mostrarMensaje('exito', `${uso.nombre} quitado de la sesión`)
+      })
+      .catch(err => mostrarMensaje('error', err.message))
+  }
+
   return (
     <section id="patients-page">
       <div className="inventario-header">
         <h1>Pagos</h1>
       </div>
       <p>{formatFechaCompleta(new Date())} — {sesiones.length} sesiones</p>
+
+      <MensajeToast mensaje={mensaje} />
 
       {loading && <p className="status">Cargando sesiones de hoy...</p>}
       {error && <p className="status error">{error}</p>}
@@ -82,7 +183,7 @@ function Pagos() {
                 </tr>
               ) : (
                 sesiones.map(s => (
-                  <tr key={s.id}>
+                  <tr key={s.id} onClick={() => abrirModalMedicamentos(s)} style={{ cursor: 'pointer' }}>
                     <td>{fmtHora(s.fecha_hora)}</td>
                     <td>{s.paciente_no_expediente ?? '—'}</td>
                     <td>{s.paciente_nombre ?? '—'}</td>
@@ -96,6 +197,20 @@ function Pagos() {
           </table>
         </div>
       )}
+
+      <ModalMedicamentos
+        session={sessionSeleccionada}
+        medicamentos={medicamentos}
+        inventarioItems={inventarioItems}
+        busqueda={busqueda}
+        onBusquedaChange={setBusqueda}
+        cantidad={cantidad}
+        onCantidadChange={setCantidad}
+        cargando={cargando}
+        onClose={cerrarModalMedicamentos}
+        onAgregarMedicamento={agregarMedicamento}
+        onQuitarMedicamento={quitarMedicamento}
+      />
     </section>
   )
 }

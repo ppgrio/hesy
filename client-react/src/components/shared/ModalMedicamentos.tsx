@@ -1,9 +1,29 @@
 import { useMemo } from 'react'
-import type { Session, MedicamentoUso, InventarioItem } from './types'
-import { normalizar } from '../shared/utils'
+import { normalizar } from './utils'
+import './ModalMedicamentos.css'
+
+interface SessionMinima {
+  id: number
+  paciente_nombre: string | null
+  fecha_hora: string | null
+}
+
+interface InventarioItem {
+  id: number
+  nombre: string
+  cantidad: number
+}
+
+interface MedicamentoUso {
+  id: number
+  inventario_id: number
+  nombre: string | null
+  cantidad_usada: number
+  stock_disponible: number
+}
 
 interface Props {
-  session: Session | null
+  session: SessionMinima | null
   medicamentos: MedicamentoUso[]
   inventarioItems: InventarioItem[]
   busqueda: string

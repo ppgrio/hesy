@@ -5,11 +5,10 @@ interface Props {
   dias: Date[]
   getSesionesEnSlot: (diaIdx: number, hora: string) => Session[]
   onSlotClick: (diaIdx: number, hora: string) => void
-  onSessionClick: (s: Session) => void
   onDeleteSession: (id: number, nombre: string | null) => void
 }
 
-function CalendarioGrid({ dias, getSesionesEnSlot, onSlotClick, onSessionClick, onDeleteSession }: Props) {
+function CalendarioGrid({ dias, getSesionesEnSlot, onSlotClick, onDeleteSession }: Props) {
   return (
     <div className="cal-wrapper">
       <table className="cal-tabla">
@@ -42,7 +41,7 @@ function CalendarioGrid({ dias, getSesionesEnSlot, onSlotClick, onSessionClick, 
                           <div
                             key={s.id}
                             className="cal-paciente-item"
-                            onClick={e => { e.stopPropagation(); onSessionClick(s) }}
+                            onClick={e => e.stopPropagation()}
                           >
                             {s.acceso && <span className="cal-paciente-acceso">{s.acceso}</span>}
                             <span className="cal-paciente-nombre">{s.paciente_nombre || '—'}</span>
