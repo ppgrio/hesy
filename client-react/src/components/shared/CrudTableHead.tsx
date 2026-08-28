@@ -7,39 +7,42 @@ interface Props<T> {
   sortKey: keyof T
   sortDir: 'asc' | 'desc'
   onSort: (key: keyof T) => void
+  ocultarAcciones?: boolean
 }
 
-function CrudTableHead<T>({ columns, filtros, onFiltroChange, sortKey, sortDir, onSort }: Props<T>) {
+function CrudTableHead<T>({ columns, filtros, onFiltroChange, sortKey, sortDir, onSort, ocultarAcciones = false }: Props<T>) {
   return (
     <thead>
       <tr>
         {columns.map(col => (
           <th key={`f-${String(col.key)}`}>
-            <input
-              type="text"
-              className="filtro-input"
-              placeholder={col.label}
-              value={filtros[col.key] ?? ''}
-              onChange={e => onFiltroChange(col.key, e.target.value)}
-            />
+            {col.filterable !== false ? (
+              <input
+                type="text"
+                className="filtro-input"
+                placeholder={col.label}
+                value={filtros[col.key] ?? ''}
+                onChange={e => onFiltroChange(col.key, e.target.value)}
+              />
+            ) : null}
           </th>
         ))}
-        <th></th>
+        {!ocultarAcciones && <th></th>}
       </tr>
       <tr>
         {columns.map(col => (
           <th
             key={String(col.key)}
-            className="sortable"
-            onClick={() => onSort(col.key)}
+            className={col.sortable === false ? undefined : 'sortable'}
+            onClick={col.sortable === false ? undefined : () => onSort(col.key)}
           >
             {col.label}
-            {sortKey === col.key && (
+            {col.sortable !== false && sortKey === col.key && (
               <span className="sort-arrow">{sortDir === 'desc' ? ' ▼' : ' ▲'}</span>
             )}
           </th>
         ))}
-        <th>Acciones</th>
+        {!ocultarAcciones && <th>Acciones</th>}
       </tr>
     </thead>
   )

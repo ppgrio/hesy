@@ -6,9 +6,11 @@ from models.accesos import Accesos
 from models.filtros import Filtros
 from models.medicamentos_sesion import MedicamentosSesion
 from models.inventario import Inventario
-from sqlalchemy.orm import joinedload
+from sqlalchemy import func
+from sqlalchemy.orm import joinedload, aliased
 from sqlalchemy.exc import IntegrityError
 from datetime import datetime, timedelta
+from utils import normalizar_cadena, col_sin_acentos
 
 sesion_bp = Blueprint('sesion', __name__)
 
@@ -28,32 +30,21 @@ def sesion_to_dict(s):
         'pagado': bool(s.pagado),
     }
 
-@sesion_bp.route('/api/session')
-def get_sessions():
-    desde = request.args.get('desde')
-    hasta = request.args.get('hasta')
-
-    query = Sesiones.query.options(
-        joinedload(Sesiones.paciente).joinedload(Pacientes.acceso),
-        joinedload(Sesiones.paciente).joinedload(Pacientes.filtro),
-        joinedload(Sesiones.acceso),
-        joinedload(Sesiones.filtro)
-    )
-
+def _aplicar_rango(query, desde, hasta):
     if desde:
         try:
             query = query.filter(Sesiones.fecha_hora >= datetime.fromisoformat(desde))
         except ValueError:
-            return jsonify({'error': 'formato de desde inválido'}), 400
-
+            raise ValueError('formato de desde inválido')
     if hasta:
         try:
             query = query.filter(Sesiones.fecha_hora < datetime.fromisoformat(hasta) + timedelta(days=1))
         except ValueError:
-            return jsonify({'error': 'formato de hasta inválido'}), 400
+            raise ValueError('formato de hasta inválido')
+    return query
 
-    sesiones = query.order_by(Sesiones.fecha_hora.desc()).all()
 
+def _adjuntar_medicamentos(sesiones):
     usos = MedicamentosSesion.query.options(
         joinedload(MedicamentosSesion.inventario_item)
     ).filter(MedicamentosSesion.sesion_id.in_([s.id for s in sesiones])).all()
@@ -65,11 +56,117 @@ def get_sessions():
             'cantidad': u.cantidad_usada,
             'precio': float(u.inventario_item.precio) if u.inventario_item and u.inventario_item.precio is not None else None,
         })
-
     data = [sesion_to_dict(s) for s in sesiones]
     for d in data:
         d['medicamentos'] = por_sesion.get(d['id'], [])
-    return jsonify(data)
+    return data
+
+
+def _cargar_con_relaciones(ids):
+    query = Sesiones.query.options(
+        joinedload(Sesiones.paciente).joinedload(Pacientes.acceso),
+        joinedload(Sesiones.paciente).joinedload(Pacientes.filtro),
+        joinedload(Sesiones.acceso),
+        joinedload(Sesiones.filtro)
+    ).filter(Sesiones.id.in_(ids))
+    sesiones = query.all()
+    orden = {sid: i for i, sid in enumerate(ids)}
+    sesiones.sort(key=lambda s: orden[s.id])
+    return sesiones
+
+
+@sesion_bp.route('/api/session')
+def get_sessions():
+    try:
+        base = _aplicar_rango(Sesiones.query, request.args.get('desde'), request.args.get('hasta'))
+    except ValueError as e:
+        return jsonify({'error': str(e)}), 400
+
+    if 'page' not in request.args:
+        query = base.options(
+            joinedload(Sesiones.paciente).joinedload(Pacientes.acceso),
+            joinedload(Sesiones.paciente).joinedload(Pacientes.filtro),
+            joinedload(Sesiones.acceso),
+            joinedload(Sesiones.filtro)
+        )
+        sesiones = query.order_by(Sesiones.fecha_hora.desc()).all()
+        return jsonify(_adjuntar_medicamentos(sesiones))
+
+    page = max(request.args.get('page', 1, type=int), 1)
+    page_size = min(max(request.args.get('page_size', 20, type=int), 1), 1000)
+
+    SF = aliased(Filtros)
+    PF = aliased(Filtros)
+    q = base.join(Pacientes, Sesiones.paciente_id == Pacientes.id)
+    q = q.outerjoin(SF, Sesiones.filtro_sesion == SF.id)
+    q = q.outerjoin(PF, Pacientes.filtro_id == PF.id)
+
+    filtro_efectivo = func.coalesce(SF.estado, PF.estado)
+    precio_efectivo = func.coalesce(SF.precio, PF.precio)
+
+    nombre = request.args.get('paciente_nombre', '').strip()
+    if nombre:
+        q = q.filter(col_sin_acentos(Pacientes.nombre).ilike(f'%{normalizar_cadena(nombre)}%'))
+
+    expediente = request.args.get('paciente_no_expediente', '').strip()
+    if expediente:
+        try:
+            q = q.filter(Pacientes.no_expediente == int(expediente))
+        except ValueError:
+            pass
+
+    filtro_txt = request.args.get('filtro', '').strip()
+    if filtro_txt:
+        q = q.filter(func.lower(filtro_efectivo).like(f'%{normalizar_cadena(filtro_txt).lower()}%'))
+
+    precio = request.args.get('precio', '').strip()
+    if precio:
+        try:
+            q = q.filter(precio_efectivo == float(precio))
+        except ValueError:
+            pass
+
+    hora = request.args.get('hora', '').strip()
+    if hora:
+        q = q.filter(func.to_char(Sesiones.fecha_hora, 'HH24:MI').like(f'%{hora}%'))
+
+    estado = request.args.get('estado', '').strip()
+    if estado:
+        n = normalizar_cadena(estado.lower())
+        if n.startswith('pagad'):
+            q = q.filter(Sesiones.pagado.is_(True))
+        elif n.startswith('pend'):
+            q = q.filter(Sesiones.pagado.is_(False))
+
+    sort = request.args.get('sort', 'hora')
+    dir_ = 'desc' if request.args.get('dir', 'asc') == 'desc' else 'asc'
+    sort_map = {
+        'hora': Sesiones.fecha_hora,
+        'paciente_nombre': Pacientes.nombre,
+        'paciente_no_expediente': Pacientes.no_expediente,
+        'filtro': filtro_efectivo,
+        'precio': precio_efectivo,
+        'estado': Sesiones.pagado,
+    }
+    sort_col = sort_map.get(sort, Sesiones.fecha_hora)
+    q = q.order_by(sort_col.desc() if dir_ == 'desc' else sort_col.asc(), Sesiones.id.desc())
+
+    total = q.count()
+    ids = [
+        row[0]
+        for row in q.with_entities(Sesiones.id)
+            .offset((page - 1) * page_size)
+            .limit(page_size)
+            .all()
+    ]
+
+    return jsonify({
+        'items': _adjuntar_medicamentos(_cargar_con_relaciones(ids)),
+        'total': total,
+        'page': page,
+        'page_size': page_size,
+        'total_pages': (total + page_size - 1) // page_size,
+    })
 
 @sesion_bp.route('/api/session', methods=['POST'])
 def create_session():

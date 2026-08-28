@@ -4,6 +4,8 @@ import { matchFilter } from './utils'
 interface ColumnConfig<T> {
   key: keyof T
   label: string
+  filterable?: boolean
+  sortable?: boolean
 }
 
 type FiltrosState<T> = { [K in keyof T]: string }
@@ -21,7 +23,9 @@ interface UseSortFilterReturn<T> {
 function initFiltros<T>(columns: ColumnConfig<T>[]): FiltrosState<T> {
   const f = {} as FiltrosState<T>
   for (const col of columns) {
-    f[col.key] = '' as string
+    if (col.filterable !== false) {
+      f[col.key] = '' as string
+    }
   }
   return f
 }
