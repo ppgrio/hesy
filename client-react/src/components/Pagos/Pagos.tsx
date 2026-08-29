@@ -195,17 +195,26 @@ function Pagos() {
         return res.json()
       })
       .then(nuevoUso => {
-        setMedicamentos(prev => [...prev, nuevoUso])
+        setMedicamentos(prev => {
+          const existe = prev.some(m => m.id === nuevoUso.id)
+          return existe ? prev.map(m => (m.id === nuevoUso.id ? nuevoUso : m)) : [...prev, nuevoUso]
+        })
         const id = sessionSeleccionada.id
         setSesiones(prev => prev.map(ses => {
           if (ses.id !== id) return ses
-          return enrich({
-            ...ses,
-            medicamentos: [
-              ...(ses.medicamentos ?? []),
-              { id: nuevoUso.id, nombre: nuevoUso.nombre, cantidad: nuevoUso.cantidad_usada, precio: nuevoUso.precio },
-            ],
-          })
+          const medsActuales = ses.medicamentos ?? []
+          const existe = medsActuales.some(m => m.id === nuevoUso.id)
+          const medicamentos = existe
+            ? medsActuales.map(m =>
+                m.id === nuevoUso.id
+                  ? { id: nuevoUso.id, nombre: nuevoUso.nombre, cantidad: nuevoUso.cantidad_usada, precio: nuevoUso.precio }
+                  : m
+              )
+            : [
+                ...medsActuales,
+                { id: nuevoUso.id, nombre: nuevoUso.nombre, cantidad: nuevoUso.cantidad_usada, precio: nuevoUso.precio },
+              ]
+          return enrich({ ...ses, medicamentos })
         }))
         setCantidad(1)
         mostrarMensaje('exito', `${item.nombre} agregado a la sesión`)

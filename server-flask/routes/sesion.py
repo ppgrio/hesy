@@ -313,9 +313,16 @@ def add_medicamento_sesion(sesion_id):
             'error': f'Stock insuficiente de {inventario.nombre}. Disponible: {inventario.cantidad}'
         }), 400
 
-    uso = MedicamentosSesion(sesion_id=sesion_id, inventario_id=inventario_id, cantidad_usada=cantidad)
+    uso = MedicamentosSesion.query.filter_by(
+        sesion_id=sesion_id,
+        inventario_id=inventario_id,
+    ).first()
+    if uso:
+        uso.cantidad_usada += cantidad
+    else:
+        uso = MedicamentosSesion(sesion_id=sesion_id, inventario_id=inventario_id, cantidad_usada=cantidad)
+        db.session.add(uso)
     inventario.cantidad -= cantidad
-    db.session.add(uso)
 
     try:
         db.session.commit()

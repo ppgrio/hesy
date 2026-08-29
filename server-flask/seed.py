@@ -153,8 +153,8 @@ def seed():
         pacientes_ids = [p.id for p in Pacientes.query.all()]
 
         print('Sembrando sesiones (30-50/día)...')
-        end_date = date.today()
-        start_date = end_date - timedelta(days=30)
+        start_date = date.today()
+        end_date = start_date + timedelta(days=30)
         all_dates = [start_date + timedelta(days=i) for i in range((end_date - start_date).days + 1)]
 
         total_sesiones = 0
