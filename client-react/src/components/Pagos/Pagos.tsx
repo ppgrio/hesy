@@ -103,7 +103,6 @@ function Pagos() {
 
   const [sessionSeleccionada, setSessionSeleccionada] = useState<SesionPagoItem | null>(null)
   const [medicamentos, setMedicamentos] = useState<MedicamentoUso[]>([])
-  const [cantidad, setCantidad] = useState(1)
   const [cargando, setCargando] = useState(false)
 
   const { sortKey, sortDir, filtros: filtrosState, setFiltro, handleSort } = useSortFilter(
@@ -153,7 +152,6 @@ function Pagos() {
   function abrirModalMedicamentos(s: SesionPagoItem) {
     setSessionSeleccionada(s)
     setMedicamentos([])
-    setCantidad(1)
     setCargando(true)
     fetch(`/api/session/${s.id}/medicamentos`)
       .then(async res => {
@@ -173,13 +171,16 @@ function Pagos() {
   function cerrarModalMedicamentos() {
     setSessionSeleccionada(null)
     setMedicamentos([])
-    setCantidad(1)
   }
 
-  function agregarMedicamento(item: InventarioItem) {
+  function agregarMedicamento(item: InventarioItem, cantidad: number) {
     if (!sessionSeleccionada || cantidad < 1) return
     if (cantidad > item.cantidad) {
-      mostrarMensaje('error', `Stock insuficiente de ${item.nombre}. Disponible: ${item.cantidad}`)
+      if (item.cantidad <= 0) {
+        mostrarMensaje('error', `Ya no hay más ${item.nombre} en el inventario`)
+      } else {
+        mostrarMensaje('error', `Stock insuficiente de ${item.nombre}. Disponible: ${item.cantidad}`)
+      }
       return
     }
     fetch(`/api/session/${sessionSeleccionada.id}/medicamentos`, {
@@ -216,7 +217,6 @@ function Pagos() {
               ]
           return enrich({ ...ses, medicamentos })
         }))
-        setCantidad(1)
         mostrarMensaje('exito', `${item.nombre} agregado a la sesión`)
       })
       .catch(err => mostrarMensaje('error', err.message))
@@ -283,7 +283,7 @@ function Pagos() {
 
       {!loading && !error && (
         <div className="table-wrapper">
-          <table>
+          <table className="pagos-tabla">
             <CrudTableHead
               columns={columns}
               filtros={filtrosState}
@@ -334,8 +334,6 @@ function Pagos() {
       <ModalMedicamentos
         session={sessionSeleccionada}
         medicamentos={medicamentos}
-        cantidad={cantidad}
-        onCantidadChange={setCantidad}
         cargando={cargando}
         onClose={cerrarModalMedicamentos}
         onAgregarMedicamento={agregarMedicamento}

@@ -22,3 +22,15 @@
     color: #bf360c;
   }
 }
+
+.pagos-tabla th:nth-child(6),
+.pagos-tabla td:nth-child(6) {
+  max-width: 800px;
+  min-width: 800px;
+}
+
+.pagos-tabla td:nth-child(6) {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
