@@ -6,6 +6,8 @@ interface SessionMinima {
   id: number
   paciente_nombre: string | null
   fecha_hora: string | null
+  credito: number | null
+  cobrado: boolean
 }
 
 interface InventarioItem {
@@ -38,6 +40,7 @@ interface Props {
   onQuitarMedicamento: (uso: MedicamentoUso) => void
   precioBase?: number | null
   buscarMedicamentos: (q: string) => Promise<InventarioItem[]>
+  onDescontarCredito?: () => Promise<unknown>
 }
 
 function fmtPrecio(p: number | null | undefined): string {
@@ -47,7 +50,7 @@ function fmtPrecio(p: number | null | undefined): string {
 
 function ModalMedicamentos({
   session, medicamentos, cargando, onClose, onAgregarMedicamento, onQuitarMedicamento,
-  precioBase = null, buscarMedicamentos,
+  precioBase = null, buscarMedicamentos, onDescontarCredito,
 }: Props) {
   const [busqueda, setBusqueda] = useState('')
   const [resultados, setResultados] = useState<InventarioItem[]>([])
@@ -55,6 +58,7 @@ function ModalMedicamentos({
   const [seleccion, setSeleccion] = useState<Seleccion[]>([])
   const [medAbierto, setMedAbierto] = useState(false)
   const [pagoAbierto, setPagoAbierto] = useState(true)
+  const [descontando, setDescontando] = useState(false)
 
   useEffect(() => {
     setBusqueda('')
@@ -114,6 +118,14 @@ function ModalMedicamentos({
   )
   const totalSesion = (precioBase ?? 0) + totalMedicamentos
 
+  function descontar() {
+    if (!onDescontarCredito || descontando) return
+    setDescontando(true)
+    onDescontarCredito()
+      .catch(() => {})
+      .finally(() => setDescontando(false))
+  }
+
   if (!session) return null
 
   return (
@@ -147,63 +159,67 @@ function ModalMedicamentos({
                     <span className="modal-item-precio">
                       {u.precio != null ? `$${(u.precio * u.cantidad_usada).toFixed(2)}` : '—'}
                     </span>
-                    <button className="modal-item-quitar" onClick={() => onQuitarMedicamento(u)}>Quitar</button>
+                    {!session.cobrado && (
+                      <button className="modal-item-quitar" onClick={() => onQuitarMedicamento(u)}>Quitar</button>
+                    )}
                   </div>
                 ))
               )}
             </div>
 
-            <div className="modal-agregar">
-              <h3>Agregar medicamento</h3>
-              <div className="modal-busqueda-wrapper">
-                <input
-                  type="text"
-                  placeholder="Buscar medicamento..."
-                  value={busqueda}
-                  onChange={e => setBusqueda(e.target.value)}
-                />
-                {busqueda.trim() && (
-                  <div className="modal-resultados">
-                    {buscando ? (
-                      <div className="modal-resultados-vacio">Buscando...</div>
-                    ) : resultados.length > 0 ? (
-                      resultados.map(item => (
-                        <button
-                          key={item.id}
-                          className={`modal-resultado-item${seleccion.some(s => s.item.id === item.id) ? ' seleccionado' : ''}`}
-                          onClick={() => agregarASeleccion(item)}
-                        >
-                          <span className="modal-resultado-nombre">{item.nombre}</span>
-                          <span className="modal-resultado-stock">{fmtPrecio(item.precio)} · {item.cantidad} disp.</span>
-                        </button>
-                      ))
-                    ) : (
-                      <div className="modal-resultados-vacio">Sin resultados</div>
-                    )}
+            {!session.cobrado && (
+              <div className="modal-agregar">
+                <h3>Agregar medicamento</h3>
+                <div className="modal-busqueda-wrapper">
+                  <input
+                    type="text"
+                    placeholder="Buscar medicamento..."
+                    value={busqueda}
+                    onChange={e => setBusqueda(e.target.value)}
+                  />
+                  {busqueda.trim() && (
+                    <div className="modal-resultados">
+                      {buscando ? (
+                        <div className="modal-resultados-vacio">Buscando...</div>
+                      ) : resultados.length > 0 ? (
+                        resultados.map(item => (
+                          <button
+                            key={item.id}
+                            className={`modal-resultado-item${seleccion.some(s => s.item.id === item.id) ? ' seleccionado' : ''}`}
+                            onClick={() => agregarASeleccion(item)}
+                          >
+                            <span className="modal-resultado-nombre">{item.nombre}</span>
+                            <span className="modal-resultado-stock">{fmtPrecio(item.precio)} · {item.cantidad} disp.</span>
+                          </button>
+                        ))
+                      ) : (
+                        <div className="modal-resultados-vacio">Sin resultados</div>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {seleccion.length > 0 && (
+                  <div className="modal-seleccion">
+                    {seleccion.map(s => (
+                      <div key={s.item.id} className="modal-item-seleccion">
+                        <span className="modal-item-seleccion-nombre">{s.item.nombre}</span>
+                        <div className="modal-stepper">
+                          <button className="modal-stepper-btn" onClick={() => cambiarCantidad(s.item.id, s.cantidad - 1)}>−</button>
+                          <span className="modal-stepper-valor">{s.cantidad}</span>
+                          <button className="modal-stepper-btn" onClick={() => cambiarCantidad(s.item.id, s.cantidad + 1)}>+</button>
+                        </div>
+                        <button className="modal-item-seleccion-quitar" onClick={() => quitarSeleccion(s.item.id)}>×</button>
+                      </div>
+                    ))}
                   </div>
                 )}
-              </div>
 
-              {seleccion.length > 0 && (
-                <div className="modal-seleccion">
-                  {seleccion.map(s => (
-                    <div key={s.item.id} className="modal-item-seleccion">
-                      <span className="modal-item-seleccion-nombre">{s.item.nombre}</span>
-                      <div className="modal-stepper">
-                        <button className="modal-stepper-btn" onClick={() => cambiarCantidad(s.item.id, s.cantidad - 1)}>−</button>
-                        <span className="modal-stepper-valor">{s.cantidad}</span>
-                        <button className="modal-stepper-btn" onClick={() => cambiarCantidad(s.item.id, s.cantidad + 1)}>+</button>
-                      </div>
-                      <button className="modal-item-seleccion-quitar" onClick={() => quitarSeleccion(s.item.id)}>×</button>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              <button className="modal-confirmar" onClick={confirmar} disabled={seleccion.length === 0}>
-                Confirmar ({seleccion.length})
-              </button>
+                <button className="modal-confirmar" onClick={confirmar} disabled={seleccion.length === 0}>
+                  Confirmar ({seleccion.length})
+                </button>
               </div>
+            )}
             </Cortina>
 
             <Cortina titulo="Pago" abierto={pagoAbierto} onToggle={() => setPagoAbierto(a => !a)}>
@@ -219,8 +235,33 @@ function ModalMedicamentos({
                   </span>
                 )}
                 <span className="modal-total-fila modal-total-grande">
-                  Total de la sesión: <b>{fmtPrecio(totalSesion)}</b>
+                  Total de la sesión: {fmtPrecio(totalSesion)}
                 </span>
+                {!session.cobrado && (
+                  <>
+                    <span className="modal-total-fila">
+                      Crédito antes de la sesión: <b>{fmtPrecio(session.credito)}</b>
+                    </span>
+                    <span className="modal-total-fila">
+                      Crédito después de la sesión: <b>{fmtPrecio((session.credito ?? 0) - totalSesion)}</b>
+                    </span>
+                  </>
+                )}
+                {session.cobrado ? (
+                  <span className="modal-total-fila modal-descontado">
+                    Esta sesión ya fue cobrada del crédito
+                  </span>
+                ) : (
+                  onDescontarCredito && (
+                    <button
+                      className="modal-confirmar"
+                      onClick={descontar}
+                      disabled={descontando}
+                    >
+                      {descontando ? 'Descontando...' : `Descontar del crédito (${fmtPrecio(totalSesion)})`}
+                    </button>
+                  )
+                )}
               </div>
             </Cortina>
           </>

@@ -23,11 +23,12 @@ def sesion_to_dict(s):
         'paciente_id': s.paciente_id,
         'paciente_nombre': s.paciente.nombre if s.paciente else None,
         'paciente_no_expediente': s.paciente.no_expediente if s.paciente else None,
+        'credito': s.paciente.credito if s.paciente else None,
         'acceso': acceso_tipo,
         'filtro': filtro_estado,
         'precio': float(filtro_obj.precio) if filtro_obj and filtro_obj.precio is not None else None,
         'fecha_hora': s.fecha_hora.isoformat() if s.fecha_hora else None,
-        'pagado': bool(s.pagado),
+        'cobrado': bool(s.cobrado),
     }
 
 def _aplicar_rango(query, desde, hasta):
@@ -133,10 +134,10 @@ def get_sessions():
     estado = request.args.get('estado', '').strip()
     if estado:
         n = normalizar_cadena(estado.lower())
-        if n.startswith('pagad'):
-            q = q.filter(Sesiones.pagado.is_(True))
+        if n.startswith('cobr'):
+            q = q.filter(Sesiones.cobrado.is_(True))
         elif n.startswith('pend'):
-            q = q.filter(Sesiones.pagado.is_(False))
+            q = q.filter(Sesiones.cobrado.is_(False))
 
     sort = request.args.get('sort', 'hora')
     dir_ = 'desc' if request.args.get('dir', 'asc') == 'desc' else 'asc'
@@ -146,7 +147,7 @@ def get_sessions():
         'paciente_no_expediente': Pacientes.no_expediente,
         'filtro': filtro_efectivo,
         'precio': precio_efectivo,
-        'estado': Sesiones.pagado,
+        'estado': Sesiones.cobrado,
     }
     sort_col = sort_map.get(sort, Sesiones.fecha_hora)
     q = q.order_by(sort_col.desc() if dir_ == 'desc' else sort_col.asc(), Sesiones.id.desc())
@@ -203,16 +204,16 @@ def create_session():
             return jsonify({'error': f'Acceso "{tipo_de_acceso}" no válido'}), 400
         acceso_id = acceso.id
 
-    pagado = data.get('pagado')
-    if pagado is not None and not isinstance(pagado, bool):
-        return jsonify({'error': 'pagado debe ser un booleano'}), 400
+    cobrado = data.get('cobrado')
+    if cobrado is not None and not isinstance(cobrado, bool):
+        return jsonify({'error': 'cobrado debe ser un booleano'}), 400
 
     sesion = Sesiones(
         paciente_id=paciente_id,
         fecha_hora=fecha_hora,
         filtro_sesion=filtro_id,
         acceso_sesion=acceso_id,
-        pagado=bool(pagado) if pagado is not None else False,
+        cobrado=bool(cobrado) if cobrado is not None else False,
     )
     db.session.add(sesion)
     db.session.commit()
@@ -263,10 +264,10 @@ def update_session(id):
                 return jsonify({'error': f'Acceso "{tipo_de_acceso}" no válido'}), 400
             sesion.acceso_sesion = acceso.id
 
-    if 'pagado' in data:
-        if not isinstance(data['pagado'], bool):
-            return jsonify({'error': 'pagado debe ser un booleano'}), 400
-        sesion.pagado = data['pagado']
+    if 'cobrado' in data:
+        if not isinstance(data['cobrado'], bool):
+            return jsonify({'error': 'cobrado debe ser un booleano'}), 400
+        sesion.cobrado = data['cobrado']
 
     db.session.commit()
     return jsonify(sesion_to_dict(sesion))
@@ -296,7 +297,9 @@ def get_medicamentos_sesion(sesion_id):
 
 @sesion_bp.route('/api/session/<int:sesion_id>/medicamentos', methods=['POST'])
 def add_medicamento_sesion(sesion_id):
-    Sesiones.query.get_or_404(sesion_id)
+    sesion = Sesiones.query.get_or_404(sesion_id)
+    if sesion.cobrado:
+        return jsonify({'error': 'No se pueden agregar medicamentos a una sesión ya cobrada'}), 409
     data = request.get_json()
     inventario_id = data.get('inventario_id')
     cantidad = data.get('cantidad_usada')
@@ -341,9 +344,40 @@ def add_medicamento_sesion(sesion_id):
 @sesion_bp.route('/api/medicamento-sesion/<int:id>', methods=['DELETE'])
 def delete_medicamento_sesion(id):
     uso = MedicamentosSesion.query.get_or_404(id)
+    if uso.sesion and uso.sesion.cobrado:
+        return jsonify({'error': 'No se pueden quitar medicamentos de una sesión ya cobrada'}), 409
     inventario = uso.inventario_item
     if inventario:
         inventario.cantidad += uso.cantidad_usada
     db.session.delete(uso)
     db.session.commit()
     return jsonify({'success': True})
+
+@sesion_bp.route('/api/session/<int:id>/descontar-credito', methods=['POST'])
+def descontar_credito(id):
+    sesion = Sesiones.query.options(
+        joinedload(Sesiones.paciente).joinedload(Pacientes.acceso),
+        joinedload(Sesiones.paciente).joinedload(Pacientes.filtro),
+        joinedload(Sesiones.acceso),
+        joinedload(Sesiones.filtro),
+    ).get_or_404(id)
+
+    if sesion.cobrado:
+        return jsonify({'error': 'El crédito de esta sesión ya fue cobrado'}), 409
+
+    filtro_obj = sesion.filtro or (sesion.paciente.filtro if sesion.paciente else None)
+    total = float(filtro_obj.precio) if filtro_obj and filtro_obj.precio is not None else 0
+
+    usos = MedicamentosSesion.query.options(
+        joinedload(MedicamentosSesion.inventario_item)
+    ).filter_by(sesion_id=id).all()
+    for u in usos:
+        if u.inventario_item and u.inventario_item.precio is not None:
+            total += float(u.inventario_item.precio) * u.cantidad_usada
+
+    if sesion.paciente:
+        sesion.paciente.credito = (sesion.paciente.credito or 0) - total
+    sesion.cobrado = True
+
+    db.session.commit()
+    return jsonify({'monto_descontado': total, **sesion_to_dict(sesion)})

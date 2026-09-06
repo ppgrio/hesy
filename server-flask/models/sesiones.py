@@ -6,7 +6,7 @@ class Sesiones(db.Model):
     fecha_hora = db.Column(db.DateTime, nullable = False, index = True)
     filtro_sesion = db.Column(db.Integer, db.ForeignKey('filtros.id'))
     acceso_sesion = db.Column(db.Integer, db.ForeignKey('accesos.id'))
-    pagado = db.Column(db.Boolean, nullable=False, default=False)
+    cobrado = db.Column(db.Boolean, nullable=False, default=False)
 
     paciente = db.relationship('Pacientes', backref = 'sesiones')
     filtro = db.relationship('Filtros')

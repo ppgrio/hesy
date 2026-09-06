@@ -8,6 +8,7 @@ from routes.acceso import acceso_bp
 from routes.filtro import filtro_bp
 from routes.area import area_bp
 from routes.metodo_pago import metodo_pago_bp
+from routes.pagos import pagos_bp
 from models.init import db
 from models.pacientes import Pacientes
 from models.doctores import Doctores
@@ -18,6 +19,7 @@ from models.areas import Areas
 from models.inventario import Inventario
 from models.medicamentos_sesion import MedicamentosSesion
 from models.metodo_pago import MetodoPago
+from models.pagos import Pagos
 
 app = Flask(__name__)
 CORS(app)
@@ -32,6 +34,7 @@ app.register_blueprint(acceso_bp)
 app.register_blueprint(filtro_bp)
 app.register_blueprint(area_bp)
 app.register_blueprint(metodo_pago_bp)
+app.register_blueprint(pagos_bp)
 
 with app.app_context():
     db.create_all()

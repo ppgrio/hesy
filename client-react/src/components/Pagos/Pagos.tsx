@@ -18,9 +18,10 @@ interface SesionPago {
   paciente_no_expediente: number | null
   filtro: string | null
   precio: number | null
+  credito: number | null
   fecha_hora: string | null
   medicamentos: { id: number; nombre: string | null; cantidad: number; precio: number | null }[]
-  pagado: boolean
+  cobrado: boolean
 }
 
 interface SesionPagoItem extends SesionPago {
@@ -87,7 +88,7 @@ function enrich(s: SesionPago): SesionPagoItem {
     hora: fmtHora(s.fecha_hora),
     medicamentos_text: fmtMedicamentos(s.medicamentos ?? []),
     costo: costoSesion(s),
-    estado: s.pagado ? 'Pagado' : 'Pendiente',
+    estado: s.cobrado ? 'Cobrado' : 'Pendiente',
   }
 }
 
@@ -243,25 +244,21 @@ function Pagos() {
       .catch(err => mostrarMensaje('error', err.message))
   }
 
-  function togglePago(s: SesionPagoItem) {
-    const nuevo = !s.pagado
-    fetch(`/api/session/${s.id}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ pagado: nuevo }),
-    })
+  function descontarCredito(s: SesionPagoItem): Promise<SesionPagoItem> {
+    return fetch(`/api/session/${s.id}/descontar-credito`, { method: 'POST' })
       .then(async res => {
         if (!res.ok) {
           const err = await res.json()
-          throw new Error(err.error || 'Error al actualizar el estado')
+          throw new Error(err.error || 'Error al descontar el crédito')
         }
         return res.json()
       })
       .then(updated => {
-        setSesiones(prev => prev.map(x => (x.id === updated.id ? enrich({ ...x, pagado: updated.pagado }) : x)))
-        mostrarMensaje('exito', `Sesión marcada como ${nuevo ? 'pagada' : 'pendiente'}`)
+        setSesiones(prev => prev.map(x => (x.id === updated.id ? enrich({ ...x, ...updated }) : x)))
+        setSessionSeleccionada(prev => prev && prev.id === updated.id ? enrich({ ...prev, ...updated }) : prev)
+        mostrarMensaje('exito', `Se descontaron $${(updated.monto_descontado ?? 0).toFixed(2)} del crédito`)
+        return enrich({ ...s, ...updated })
       })
-      .catch(err => mostrarMensaje('error', err.message))
   }
 
   return (
@@ -310,14 +307,12 @@ function Pagos() {
                     <td>{s.precio != null ? `$${s.precio.toFixed(2)}` : '—'}</td>
                     <td>{s.medicamentos_text}</td>
                     <td><b>${s.costo.toFixed(2)}</b></td>
-                    <td onClick={e => e.stopPropagation()}>
-                      <button
-                        className={`estado-badge ${s.pagado ? 'estado-pagado' : 'estado-pendiente'}`}
-                        onClick={e => { e.stopPropagation(); togglePago(s) }}
-                        title={s.pagado ? 'Marcar como pendiente' : 'Marcar como pagada'}
+                    <td>
+                      <span
+                        className={`estado-badge ${s.cobrado ? 'estado-cobrado' : 'estado-pendiente'}`}
                       >
                         {s.estado}
-                      </button>
+                      </span>
                     </td>
                   </tr>
                 ))
@@ -340,6 +335,7 @@ function Pagos() {
         onQuitarMedicamento={quitarMedicamento}
         precioBase={sessionSeleccionada?.precio ?? null}
         buscarMedicamentos={buscarMedicamentos}
+        onDescontarCredito={sessionSeleccionada ? () => descontarCredito(sessionSeleccionada) : undefined}
       />
     </section>
   )
