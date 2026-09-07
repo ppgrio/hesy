@@ -31,6 +31,23 @@ interface Seleccion {
   cantidad: number
 }
 
+interface MetodoPago {
+  id: number
+  nombre: string
+}
+
+interface Abono {
+  metodo_pago_id: number
+  metodo: string
+  monto: number
+}
+
+interface PagoRegistrado {
+  id: number
+  monto: number
+  metodo: string | null
+}
+
 interface Props {
   session: SessionMinima | null
   medicamentos: MedicamentoUso[]
@@ -40,7 +57,8 @@ interface Props {
   onQuitarMedicamento: (uso: MedicamentoUso) => void
   precioBase?: number | null
   buscarMedicamentos: (q: string) => Promise<InventarioItem[]>
-  onDescontarCredito?: () => Promise<unknown>
+  onDescontarCredito?: (abonos: Abono[]) => Promise<unknown>
+  onAbonar?: (abonos: Abono[]) => Promise<unknown>
 }
 
 function fmtPrecio(p: number | null | undefined): string {
@@ -50,7 +68,7 @@ function fmtPrecio(p: number | null | undefined): string {
 
 function ModalMedicamentos({
   session, medicamentos, cargando, onClose, onAgregarMedicamento, onQuitarMedicamento,
-  precioBase = null, buscarMedicamentos, onDescontarCredito,
+  precioBase = null, buscarMedicamentos, onDescontarCredito, onAbonar,
 }: Props) {
   const [busqueda, setBusqueda] = useState('')
   const [resultados, setResultados] = useState<InventarioItem[]>([])
@@ -58,7 +76,13 @@ function ModalMedicamentos({
   const [seleccion, setSeleccion] = useState<Seleccion[]>([])
   const [medAbierto, setMedAbierto] = useState(false)
   const [pagoAbierto, setPagoAbierto] = useState(true)
+  const [abonarAbierto, setAbonarAbierto] = useState(false)
   const [descontando, setDescontando] = useState(false)
+  const [metodos, setMetodos] = useState<MetodoPago[]>([])
+  const [metodoId, setMetodoId] = useState('')
+  const [monto, setMonto] = useState('')
+  const [abonos, setAbonos] = useState<Abono[]>([])
+  const [pagos, setPagos] = useState<PagoRegistrado[]>([])
 
   useEffect(() => {
     setBusqueda('')
@@ -67,7 +91,31 @@ function ModalMedicamentos({
     setSeleccion([])
     setMedAbierto(false)
     setPagoAbierto(true)
+    setAbonarAbierto(false)
+    setAbonos([])
+    setMetodoId('')
+    setMonto('')
+    setPagos([])
   }, [session?.id])
+
+  useEffect(() => {
+    if (!session?.id) return
+    let activo = true
+    fetch(`/api/session/${session.id}/pagos`)
+      .then(r => r.json())
+      .then((data: PagoRegistrado[]) => { if (activo) setPagos(data) })
+      .catch(() => {})
+    return () => { activo = false }
+  }, [session?.id])
+
+  useEffect(() => {
+    fetch('/api/metodos-pago')
+      .then(r => r.json())
+      .then((data: MetodoPago[]) => {
+        setMetodos(data)
+      })
+      .catch(() => {})
+  }, [])
 
   useEffect(() => {
     const q = busqueda.trim()
@@ -121,10 +169,44 @@ function ModalMedicamentos({
   function descontar() {
     if (!onDescontarCredito || descontando) return
     setDescontando(true)
-    onDescontarCredito()
+    onDescontarCredito(abonos)
+      .then(() => { setAbonos([]) })
       .catch(() => {})
       .finally(() => setDescontando(false))
   }
+
+  const [abonando, setAbonando] = useState(false)
+
+  function abonar() {
+    if (!onAbonar || abonando || abonos.length === 0) return
+    setAbonando(true)
+    onAbonar(abonos)
+      .then(() => {
+        setAbonos([])
+        if (session) {
+          fetch(`/api/session/${session.id}/pagos`)
+            .then(r => r.json())
+            .then((data: PagoRegistrado[]) => setPagos(data))
+            .catch(() => {})
+        }
+      })
+      .catch(() => {})
+      .finally(() => setAbonando(false))
+  }
+
+  function agregarAbono() {
+    const importe = parseFloat(monto)
+    if (!metodoId || Number.isNaN(importe) || importe <= 0) return
+    const metodo = metodos.find(m => m.id === Number(metodoId))
+    setAbonos(prev => [...prev, {
+      metodo_pago_id: Number(metodoId),
+      metodo: metodo?.nombre ?? '—',
+      monto: importe,
+    }])
+    setMonto('')
+  }
+
+  const totalAbonos = abonos.reduce((acc, a) => acc + a.monto, 0)
 
   if (!session) return null
 
@@ -243,7 +325,7 @@ function ModalMedicamentos({
                       Crédito antes de la sesión: <b>{fmtPrecio(session.credito)}</b>
                     </span>
                     <span className="modal-total-fila">
-                      Crédito después de la sesión: <b>{fmtPrecio((session.credito ?? 0) - totalSesion)}</b>
+                      Crédito después de la sesión: <b>{fmtPrecio((session.credito ?? 0) - totalSesion + totalAbonos)}</b>
                     </span>
                   </>
                 )}
@@ -258,11 +340,103 @@ function ModalMedicamentos({
                       onClick={descontar}
                       disabled={descontando}
                     >
-                      {descontando ? 'Descontando...' : `Descontar del crédito (${fmtPrecio(totalSesion)})`}
+                      {descontando ? 'Descontando...' : `Cobrar (${fmtPrecio(totalSesion)})`}
                     </button>
                   )
                 )}
               </div>
+            </Cortina>
+
+            <Cortina titulo="Abonar" abierto={abonarAbierto} onToggle={() => setAbonarAbierto(a => !a)}>
+              {pagos.length === 0 ? (
+                <>
+                  <div className="modal-abonar">
+                    <div className="modal-abonar-controles">
+                      <select
+                        className="modal-abonar-select"
+                        value={metodoId}
+                        onChange={e => setMetodoId(e.target.value)}
+                      >
+                        <option value="">Ninguno</option>
+                        {metodos.map(m => (
+                          <option key={m.id} value={m.id}>{m.nombre}</option>
+                        ))}
+                      </select>
+                      <input
+                        type="text"
+                        inputMode="decimal"
+                        placeholder="Cantidad"
+                        className="modal-abonar-monto"
+                        value={monto}
+                        onChange={e => setMonto(e.target.value)}
+                      />
+                      <button
+                        className="modal-abonar-btn"
+                        onClick={agregarAbono}
+                        disabled={!metodoId || !(parseFloat(monto) > 0)}
+                      >
+                        Agregar
+                      </button>
+                    </div>
+                  </div>
+                  <div className="modal-abonos-wrap">
+                    <div className="modal-abonos">
+                      {abonos.map((a, i) => (
+                        <div key={i} className="modal-total-fila">
+                          <span>{a.metodo}: <b>{fmtPrecio(a.monto)}</b></span>
+                          <button
+                            className="modal-abono-quitar"
+                            onClick={() => setAbonos(prev => prev.filter((_, idx) => idx !== i))}
+                          >
+                            ×
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="modal-abonar-fila">
+                      <span className="modal-total-grande">
+                        Total abonado: {fmtPrecio(totalAbonos)}
+                      </span>
+                      <button
+                        className="modal-confirmar modal-confirmar-auto"
+                        type="button"
+                        onClick={abonar}
+                        disabled={!onAbonar || abonos.length === 0 || abonando}
+                      >
+                        {abonando ? 'Abonando...' : 'Abonar'}
+                      </button>
+                    </div>
+                    <span className="modal-total-fila">
+                      Crédito del paciente: <b>{fmtPrecio(session.credito)}</b>
+                    </span>
+                    <span className="modal-total-fila">
+                      Crédito después del abono: <b>{fmtPrecio((session.credito ?? 0) + totalAbonos)}</b>
+                    </span>
+                  </div>
+                </>
+              ) : (
+                <div className="modal-abonos">
+                  {pagos.length === 0 ? (
+                    <span className="modal-total-fila modal-descontado">
+                      Sin abonos registrados
+                    </span>
+                  ) : (
+                    <>
+                      {pagos.map(p => (
+                        <span key={p.id} className="modal-total-fila">
+                          {p.metodo ?? '—'}: <b>{fmtPrecio(p.monto)}</b>
+                        </span>
+                      ))}
+                      <span className="modal-total-fila modal-total-grande">
+                        Total abonado: {fmtPrecio(pagos.reduce((acc, p) => acc + p.monto, 0))}
+                      </span>
+                      <span className="modal-total-fila">
+                        Crédito del paciente: <b>{fmtPrecio(session.credito)}</b>
+                      </span>
+                    </>
+                  )}
+                </div>
+              )}
             </Cortina>
           </>
         )}

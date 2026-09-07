@@ -6,6 +6,8 @@ from models.accesos import Accesos
 from models.filtros import Filtros
 from models.medicamentos_sesion import MedicamentosSesion
 from models.inventario import Inventario
+from models.pagos import Pagos
+from models.metodo_pago import MetodoPago
 from sqlalchemy import func
 from sqlalchemy.orm import joinedload, aliased
 from sqlalchemy.exc import IntegrityError
@@ -375,9 +377,31 @@ def descontar_credito(id):
         if u.inventario_item and u.inventario_item.precio is not None:
             total += float(u.inventario_item.precio) * u.cantidad_usada
 
+    data = request.get_json(silent=True) or {}
+    abonos = data.get('abonos') or []
+    total_abonos = 0.0
+
+    for abono in abonos:
+        monto = abono.get('monto')
+        metodo_pago_id = abono.get('metodo_pago_id')
+        try:
+            monto = float(monto)
+        except (TypeError, ValueError):
+            return jsonify({'error': 'Cada abono debe tener un monto numérico'}), 400
+        if monto <= 0:
+            return jsonify({'error': 'El monto de cada abono debe ser mayor a 0'}), 400
+        if metodo_pago_id is not None and not MetodoPago.query.get(metodo_pago_id):
+            return jsonify({'error': 'Método de pago no válido'}), 400
+        db.session.add(Pagos(
+            sesion_id=id,
+            monto=monto,
+            metodo_pago_id=metodo_pago_id,
+        ))
+        total_abonos += monto
+
     if sesion.paciente:
-        sesion.paciente.credito = (sesion.paciente.credito or 0) - total
+        sesion.paciente.credito = (sesion.paciente.credito or 0) - total + total_abonos
     sesion.cobrado = True
 
     db.session.commit()
-    return jsonify({'monto_descontado': total, **sesion_to_dict(sesion)})
+    return jsonify({'monto_descontado': total, 'monto_abonado': total_abonos, **sesion_to_dict(sesion)})

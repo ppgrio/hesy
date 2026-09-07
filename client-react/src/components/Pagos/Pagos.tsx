@@ -38,6 +38,11 @@ interface InventarioItem {
   precio: number | null
 }
 
+interface Abono {
+  metodo_pago_id: number
+  monto: number
+}
+
 interface MedicamentoUso {
   id: number
   inventario_id: number
@@ -244,8 +249,37 @@ function Pagos() {
       .catch(err => mostrarMensaje('error', err.message))
   }
 
-  function descontarCredito(s: SesionPagoItem): Promise<SesionPagoItem> {
-    return fetch(`/api/session/${s.id}/descontar-credito`, { method: 'POST' })
+  function abonarCredito(s: SesionPagoItem, abonos: Abono[]): Promise<void> {
+    return fetch(`/api/session/${s.id}/abonos`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        abonos: abonos.map(a => ({ metodo_pago_id: a.metodo_pago_id, monto: a.monto })),
+      }),
+    })
+      .then(async res => {
+        if (!res.ok) {
+          const err = await res.json()
+          throw new Error(err.error || 'Error al abonar')
+        }
+        return res.json()
+      })
+      .then(updated => {
+        const credito = updated.credito ?? s.credito
+        setSesiones(prev => prev.map(x => (x.id === s.id ? enrich({ ...x, credito }) : x)))
+        setSessionSeleccionada(prev => prev && prev.id === s.id ? enrich({ ...prev, credito }) : prev)
+        mostrarMensaje('exito', `Se abonaron $${(updated.monto_abonado ?? 0).toFixed(2)} al crédito`)
+      })
+  }
+
+  function descontarCredito(s: SesionPagoItem, abonos: Abono[]): Promise<SesionPagoItem> {
+    return fetch(`/api/session/${s.id}/descontar-credito`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        abonos: abonos.map(a => ({ metodo_pago_id: a.metodo_pago_id, monto: a.monto })),
+      }),
+    })
       .then(async res => {
         if (!res.ok) {
           const err = await res.json()
@@ -256,7 +290,7 @@ function Pagos() {
       .then(updated => {
         setSesiones(prev => prev.map(x => (x.id === updated.id ? enrich({ ...x, ...updated }) : x)))
         setSessionSeleccionada(prev => prev && prev.id === updated.id ? enrich({ ...prev, ...updated }) : prev)
-        mostrarMensaje('exito', `Se descontaron $${(updated.monto_descontado ?? 0).toFixed(2)} del crédito`)
+        mostrarMensaje('exito', `Se descontaron $${(updated.monto_descontado ?? 0).toFixed(2)} del crédito` + (updated.monto_abonado ? ` (+$${updated.monto_abonado.toFixed(2)} abonados)` : ''))
         return enrich({ ...s, ...updated })
       })
   }
@@ -335,7 +369,8 @@ function Pagos() {
         onQuitarMedicamento={quitarMedicamento}
         precioBase={sessionSeleccionada?.precio ?? null}
         buscarMedicamentos={buscarMedicamentos}
-        onDescontarCredito={sessionSeleccionada ? () => descontarCredito(sessionSeleccionada) : undefined}
+        onDescontarCredito={sessionSeleccionada ? (abonos) => descontarCredito(sessionSeleccionada, abonos) : undefined}
+        onAbonar={sessionSeleccionada ? (abonos) => abonarCredito(sessionSeleccionada, abonos) : undefined}
       />
     </section>
   )
